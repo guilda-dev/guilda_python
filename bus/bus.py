@@ -3,12 +3,18 @@ from numpy.linalg import norm
 from cmath import phase
 
 from component import Component, ComponentEmpty
+from utils.data import convert_to_complex
 
-class Bus():
+from typing import Union, List, Optional
+
+ComplexOrNumList = Union[complex, List[Union[int, float]]]
+
+class Bus(object):
 
     def __init__(self, shunt):
-        self.V_equilibrium = None
-        self.I_equilibrium = None
+        self.V_equilibrium: Optional[complex] = None
+        self.I_equilibrium: Optional[complex] = None
+        self.component: Component = None
         self.set_component(ComponentEmpty())
         self.set_shunt(shunt)
 
@@ -18,11 +24,10 @@ class Bus():
     def get_nu(self):
         return len(self.component.get_nu())
 
-    def set_equilibrium(self, Veq, Ieq):
-        if type(Veq) == list:
-            Veq = complex(Veq[0],Veq[0])
-        if type(Ieq) == list:
-            Ieq = complex(Ieq[0],Ieq[0])
+    def set_equilibrium(self, Veq: ComplexOrNumList, Ieq: ComplexOrNumList):
+        Veq = convert_to_complex(Veq)
+        Ieq = convert_to_complex(Ieq)
+        
         self.V_equilibrium = Veq
         self.I_equilibrium = Ieq
         self.component.set_equilibrium(Veq, Ieq)
