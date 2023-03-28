@@ -1,0 +1,11 @@
+{
+  "python.linting.pylintEnabled": true,
+  "python.linting.mypyEnabled": true,
+  "python.linting.enabled": true,
+  "isort.args": [
+      "--src=${workspaceFolder}"
+  ],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true
+}

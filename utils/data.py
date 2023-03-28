@@ -1,6 +1,8 @@
-from typing import *
-from numpy.typing import *
 import numpy as np
+from numpy.typing import NDArray
+from typing import TypeVar, List
+
+from utils.typing import FloatArray
 
 
 def convert_to_complex(obj) -> complex:
@@ -48,8 +50,19 @@ T = TypeVar('T')
 def sep_list(lst: List[T], lens: List[int]) -> List[List[T]]:
     idx = 0
     ret: List[List[T]] = []
-    for len in lens:
-        cells = lst[idx: idx + len]
-        idx += len
+    for len_ in lens:
+        cells = lst[idx: idx + len_]
+        idx += len_
         ret.append(cells)
     return ret
+
+
+def complex_to_matrix(z: complex) -> FloatArray:
+    r = z.real
+    c = z.imag
+    return np.array([[r, -c], [c, r]])
+
+def complex_to_col_vec(z: complex) -> FloatArray:
+    r = z.real
+    c = z.imag
+    return np.array([[r], [c]])

@@ -1,4 +1,4 @@
-from component import Component
+from base.component import Component
 
 import numpy as np
 

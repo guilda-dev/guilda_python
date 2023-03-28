@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from cmath import phase
 
-from component import Component, ComponentEmpty
+from base.component import Component, ComponentEmpty
 from utils.data import convert_to_complex
 
 from typing import Union, List, Optional
@@ -14,7 +14,7 @@ class Bus(object):
     def __init__(self, shunt):
         self.V_equilibrium: Optional[complex] = None
         self.I_equilibrium: Optional[complex] = None
-        self.component: Component = None
+        self.component: Component = None # type: ignore
         self.set_component(ComponentEmpty())
         self.set_shunt(shunt)
 

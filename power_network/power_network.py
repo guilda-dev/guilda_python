@@ -353,7 +353,7 @@ class PowerNetwork(object):
             r = lambda t, y, flag: reporter.report(t, y, flag, options.reset_time, t_now)
             
             # :138
-            sol = odeint(func, x, t_simulated[i: i + 2]
+            sol = odeint(func, x, t_simulated[i: i + 2],
                 method='bdf', order=15,
                 atol=options.AbsTol, rtol=options.RelTol, 
             )

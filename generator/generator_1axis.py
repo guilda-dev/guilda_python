@@ -5,24 +5,31 @@ from cmath import phase
 import control as ct
 from control import StateSpace as SS
 
-from component import Component
+from base.component import Component
 from governor import Governor
 from avr.avr import Avr
 from pss import Pss
 
+
 class Generator1Axis(Component):
-# モデル  ：同期発電機の一軸モデル
-#         ・状態：３つ「回転子偏角"δ",周波数偏差"Δω",内部電圧"E"」
-#               *AVRやPSSが付加されるとそれらの状態も追加される
-#         ・入力：２ポート「界磁入力"Vfield", 機械入力"Pmech"」
-#               *定常値からの追加分を指定
-# 親クラス：componentクラス
-# 実行方法：obj =　generator_1axis(omega, parameter)
-# 　引数　：・omega     : float値．系統周波数(50or60*2pi)
-# 　　　　　・parameter : pandas.Series型．「'Xd', 'Xd_prime','Xq','T','M','D'」を列名として定義
-# 　出力　：componentクラスのインスタンス
+    """
+モデル  ：同期発電機の一軸モデル
+        ・状態：３つ「回転子偏角"δ",周波数偏差"Δω",内部電圧"E"」
+              *AVRやPSSが付加されるとそれらの状態も追加される
+        ・入力：２ポート「界磁入力"Vfield", 機械入力"Pmech"」
+              *定常値からの追加分を指定
+親クラス：componentクラス
+実行方法：obj = generator_1axis(omega, parameter)
+ 引数 ：・omega     : float値．系統周波数(50or60*2pi)
+     ・parameter : pandas.Series型．「'Xd', 'Xd_prime','Xq','T','M','D'」を列名として定義
+ 出力 ：componentクラスのインスタンス
+
+    Args:
+        Component (_type_): _description_
+    """
+
     def __init__(self, omega, parameter):
-        if type(parameter) != pd.core.frame.DataFrame:
+        if type(parameter) != pd.DataFrame:
             raise TypeError('parameter must be pandas.Series')
         else:
             cols = parameter.columns
@@ -88,21 +95,23 @@ class Generator1Axis(Component):
         Vabscos = V.real*cos(delta) + V.imag*sin(delta)
         Vabssin = V.real*sin(delta) - V.imag*cos(delta)
 
-        Ir =  (E-Vabscos)*sin(delta)/Xdp + Vabssin*cos(delta)/Xq
+        Ir = (E-Vabscos)*sin(delta)/Xdp + Vabssin*cos(delta)/Xq
         Ii = -(E-Vabscos)*cos(delta)/Xdp + Vabssin*sin(delta)/Xq
 
-        con = np.array([[I.real],[I.imag]]) - np.array([[Ir], [Ii]])
+        con = np.array([[I.real], [I.imag]]) - np.array([[Ir], [Ii]])
 
         Efd = Xd*E/Xdp - (Xd/Xdp - 1)*Vabscos
 
         # スカラーを返す
         [dx_pss, v] = self.pss.get_u(x_pss, omega)
-        [dx_avr, Vfd] = self.avr.get_Vfd(x_avr=x_avr, Vabs=Vabs, Efd=Efd, u=u[0,0]-v)
-        [dx_gov, P] = self.governor.get_P(x_gov=x_gov, omega=omega, u=u[1,0])
+        [dx_avr, Vfd] = self.avr.get_Vfd(
+            x_avr=x_avr, Vabs=Vabs, Efd=Efd, u=u[0, 0]-v)
+        [dx_gov, P] = self.governor.get_P(x_gov=x_gov, omega=omega, u=u[1, 0])
 
         dE = (-Efd + Vfd)/Tdo
         ddelta = omega0*omega
-        domega = (P - d*omega - Vabs*E*sin(delta-Vangle)/Xdp + Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
+        domega = (P - d*omega - Vabs*E*sin(delta-Vangle)/Xdp +
+                  Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
 
         dE = np.array(dE).reshape(-1, 1)
         ddelta = np.array(ddelta).reshape(-1, 1)
@@ -116,25 +125,27 @@ class Generator1Axis(Component):
         return [dx, con]
 
     def get_dx_constraint_linear(self, x, V, I, u, t=None):
-        A  = self.system_matrix['A']
-        B  = self.system_matrix['B']
-        C  = self.system_matrix['C']
-        D  = self.system_matrix['D']
+        A = self.system_matrix['A']
+        B = self.system_matrix['B']
+        C = self.system_matrix['C']
+        D = self.system_matrix['D']
         BV = self.system_matrix['BV']
         DV = self.system_matrix['DV']
         BI = self.system_matrix['BI']
         DI = self.system_matrix['DI']
-        dx = A @ (x-self.x_equilibrium) + B @ u + BV @ (V-self.V_equilibrium) + BI @ (I-self.I_equilibrium)
-        con = C @ (x-self.x_equilibrium) + D @ u + DV @ (V-self.V_equilibrium) + DI @ (I-self.I_equilibrium)
+        dx = A @ (x-self.x_equilibrium) + B @ u + \
+            BV @ (V-self.V_equilibrium) + BI @ (I-self.I_equilibrium)
+        con = C @ (x-self.x_equilibrium) + D @ u + \
+            DV @ (V-self.V_equilibrium) + DI @ (I-self.I_equilibrium)
 
         return [dx, con]
 
-    def get_linear_matrix(self, xeq=[None], Veq=None):
-        if (not any(xeq) and Veq==None):
-            A  = self.system_matrix['A']
-            B  = self.system_matrix['B']
-            C  = self.system_matrix['C']
-            D  = self.system_matrix['D']
+    def get_linear_matrix(self, v, x):
+        if (not any(x) and v == None):
+            A = self.system_matrix['A']
+            B = self.system_matrix['B']
+            C = self.system_matrix['C']
+            D = self.system_matrix['D']
             BV = self.system_matrix['BV']
             DV = self.system_matrix['DV']
             BI = self.system_matrix['BI']
@@ -143,11 +154,11 @@ class Generator1Axis(Component):
             S = self.system_matrix['S']
             return [A, B, C, D, BV, DV, BI, DI, R, S]
 
-        if not any(xeq):
-            xeq = self.x_equilibrium
+        if not any(x):
+            x = self.x_equilibrium
 
-        if Veq==None:
-            Veq = self.V_equilibrium
+        if v == None:
+            v = self.V_equilibrium
 
         omega0 = self.omega0
         Xd = self.parameter['Xd']
@@ -183,8 +194,8 @@ class Generator1Axis(Component):
         SS.set_outputs(sys_swing, swing_outputs)
 
         #状態の平衡点を取得
-        delta = xeq[0, 0]
-        E = xeq[2, 0]
+        delta = x[0, 0]
+        E = x[2, 0]
 
         # 以下、行ベクトル
         dVabscos_dV = np.array([cos(delta), sin(delta)]).reshape(1, -1)
@@ -193,30 +204,35 @@ class Generator1Axis(Component):
         dIi_dV = dVabscos_dV*cos(delta)/Xdp + dVabssin_dV*sin(delta)/Xq
 
         # 以下、スカラー
-        Vabscos = Veq.real*cos(delta) + Veq.imag*sin(delta)
-        Vabssin = Veq.real*sin(delta) - Veq.imag*cos(delta)
+        Vabscos = v.real*cos(delta) + v.imag*sin(delta)
+        Vabssin = v.real*sin(delta) - v.imag*cos(delta)
         dVabscos = -Vabssin
         dVabssin = Vabscos
 
         # 以下、行ベクトル
-        vec1 = np.concatenate([np.array([[dVabscos]]), np.array([[0]]), dVabscos_dV], axis=1)
+        vec1 = np.concatenate(
+            [np.array([[dVabscos]]), np.array([[0]]), dVabscos_dV], axis=1)
         vec2 = np.array([0, Xd/Xdp, 0, 0]).reshape(1, -1)
         dEfd = -vec1*(Xd/Xdp-1) + vec2
 
         # 以下、スカラー
-        dIr_dd = (-dVabscos*sin(delta)+(E-Vabscos)*cos(delta))/Xdp + (dVabssin*cos(delta)-Vabssin*sin(delta))/Xq
-        dIi_dd = (dVabscos*cos(delta)+(E-Vabscos)*sin(delta))/Xdp + (dVabssin*sin(delta)+Vabssin*cos(delta))/Xq
+        dIr_dd = (-dVabscos*sin(delta)+(E-Vabscos)*cos(delta)) / \
+            Xdp + (dVabssin*cos(delta)-Vabssin*sin(delta))/Xq
+        dIi_dd = (dVabscos*cos(delta)+(E-Vabscos)*sin(delta)) / \
+            Xdp + (dVabssin*sin(delta)+Vabssin*cos(delta))/Xq
 
         Ieq_vec = np.array([[(E-Vabscos)*sin(delta)/Xdp + Vabssin*cos(delta)/Xq],
-                        [-(E-Vabscos)*cos(delta)/Xdp + Vabssin*sin(delta)/Xq]])
+                            [-(E-Vabscos)*cos(delta)/Xdp + Vabssin*sin(delta)/Xq]])
 
         # (delta, E, V) => (Ir, Ii)
-        KI_vec1 = np.concatenate([np.array([[dIr_dd]]), np.array([[sin(delta)/Xdp]]), dIr_dV], axis=1)
-        KI_vec2 = np.concatenate([np.array([[dIi_dd]]), np.array([[-cos(delta)/Xdp]]), dIi_dV], axis=1)
+        KI_vec1 = np.concatenate(
+            [np.array([[dIr_dd]]), np.array([[sin(delta)/Xdp]]), dIr_dV], axis=1)
+        KI_vec2 = np.concatenate(
+            [np.array([[dIi_dd]]), np.array([[-cos(delta)/Xdp]]), dIi_dV], axis=1)
         KI = np.concatenate([KI_vec1, KI_vec2], axis=0)
 
         vec3 = np.concatenate([np.zeros([2, 2]), np.identity(2)], axis=1)
-        dP = np.array([Veq.real, Veq.imag]).reshape(1, -1) @ KI + Ieq_vec.T @ vec3
+        dP = np.array([v.real, v.imag]).reshape(1, -1) @ KI + Ieq_vec.T @ vec3
 
         # sys_fbの直達行列(4×4)
         D_fb = np.concatenate([dP, dEfd, KI], axis=0)
@@ -230,9 +246,10 @@ class Generator1Axis(Component):
         SS.set_inputs(sys_fb, fb_inputs)
         SS.set_outputs(sys_fb, fb_outputs)
 
-        Vabs = abs(Veq)
+        Vabs = abs(v)
         # sys_Vの直達行列(3×2)
-        D_V = np.concatenate([np.identity(2), np.array([Veq.real, Veq.imag]).reshape(1, -1)/Vabs], axis=0)
+        D_V = np.concatenate([np.identity(2), np.array(
+            [v.real, v.imag]).reshape(1, -1)/Vabs], axis=0)
         A_V = np.array([]).reshape(1, -1)
         B_V = np.array([]).reshape(-1, 2)
         C_V = np.array([]).reshape(3, -1)
@@ -273,7 +290,8 @@ class Generator1Axis(Component):
                 ['sys_gov.omega_governor', 'sys_swing.omega'],
                 ['sys_swing.Pmech', 'sys_gov.Pmech']
             ],
-            inplist=['sys_avr.u_avr', 'sys_gov.u_governor', 'sys_V.Vrin', 'sys_V.Viin'],
+            inplist=['sys_avr.u_avr', 'sys_gov.u_governor',
+                     'sys_V.Vrin', 'sys_V.Viin'],
             outlist=['sys_fb.Ir', 'sys_fb.Ii']
         )
 
@@ -287,15 +305,19 @@ class Generator1Axis(Component):
 
         # ret_uの作成
         A = ss_closed.A
-        B = ss_closed.B[:, SS.find_input(ss_closed, 'u_avr'):SS.find_input(ss_closed, 'u_governor')+1]
+        B = ss_closed.B[:, SS.find_input(
+            ss_closed, 'u_avr'):SS.find_input(ss_closed, 'u_governor')+1]
         C = ss_closed.C
-        D = ss_closed.D[:, SS.find_input(ss_closed, 'u_avr'):SS.find_input(ss_closed, 'u_governor')+1]
-        BV = ss_closed.B[:, SS.find_input(ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
-        DV = ss_closed.D[:, SS.find_input(ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
+        D = ss_closed.D[:, SS.find_input(
+            ss_closed, 'u_avr'):SS.find_input(ss_closed, 'u_governor')+1]
+        BV = ss_closed.B[:, SS.find_input(
+            ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
+        DV = ss_closed.D[:, SS.find_input(
+            ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
         BI = np.zeros([A.shape[0], 2])
         DI = -np.identity(2)
-        R = np.array([[]]).reshape(self.get_nx(),-1)
-        S = np.array([[]]).reshape(-1,self.get_nx())
+        R = np.array([[]]).reshape(self.get_nx(), -1)
+        S = np.array([[]]).reshape(-1, self.get_nx())
 
         return [A, B, C, D, BV, DV, BI, DI, R, S]
 
@@ -322,7 +344,8 @@ class Generator1Axis(Component):
             return
 
         mat = {}
-        [mat['A'], mat['B'], mat['C'], mat['D'], mat['BV'], mat['DV'], mat['BI'], mat['DI'], mat['R'], mat['S']] = self.get_linear_matrix(xeq, Veq)
+        [mat['A'], mat['B'], mat['C'], mat['D'], mat['BV'], mat['DV'], mat['BI'],
+            mat['DI'], mat['R'], mat['S']] = self.get_linear_matrix(xeq, Veq)
         self.system_matrix = mat
 
     def set_equilibrium(self, V, I):
@@ -353,5 +376,3 @@ class Generator1Axis(Component):
         self.I_equilibrium = I
         self.set_linear_matrix(x_st, V)
         return x_st
-
-

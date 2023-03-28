@@ -51,8 +51,8 @@ branch_data = [[1, 2, 0.01 , 0.085, 0, 0, 0],
 branch_cols = ["bus_from", "bus_to", "x_real", "x_imag", "y", "tap", "phase"]
 branches_df = pd.DataFrame(data=branch_data, columns=branch_cols)
 
-for i in range(len(branches_df)):
-    branch_i = branches_df.loc[i]
+for I in range(len(branches_df)):
+    branch_i = branches_df.loc[I]
     if branch_i['tap'] == 0:
         br = BranchPi(branch_i['bus_from'], branch_i['bus_to'], \
                       branch_i[['x_real', 'x_imag']].values.tolist(), branch_i['y'])
@@ -72,15 +72,15 @@ bus_cols = ['No', 'V_abs', 'V_angle', 'P_gen', 'Q_gen', 'P_load', 'Q_load', 'G_s
 bus_df = pd.DataFrame(data=bus_data, columns=bus_cols)
 
 
-for i in range(len(bus_df)):
-    bus_i = bus_df.loc[i]
+for I in range(len(bus_df)):
+    bus_i = bus_df.loc[I]
     shunt = bus_i[['G_shunt', 'B_shunt']].values.tolist()
     if bus_i['type'] == 'slack':
         b = BusSlack(bus_i['V_abs'], bus_i['V_angle'], shunt)
-        b.set_component(get_generator(i+1))
+        b.set_component(get_generator(I+1))
     elif bus_i['type'] == 'PV':
         b = BusPV(bus_i['P_gen'], bus_i['V_abs'], shunt)
-        b.set_component(get_generator(i+1))
+        b.set_component(get_generator(I+1))
     elif bus_i['type'] == 'PQ':
         P, Q = bus_i['P_load'], bus_i['Q_load']
         b = BusPQ(P, Q, shunt)

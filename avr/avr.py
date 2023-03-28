@@ -17,7 +17,7 @@ class Avr():
 
         self.sys = sys
 
-    def get_nx(self):
+    def get_nx(self) -> int:
         # このavrには状態がない
         return 0
 

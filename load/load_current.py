@@ -1,16 +1,20 @@
 import numpy as np
 
-from component import Component
+from base.component import Component
 
 class LoadCurrent(Component):
-# モデル ：定電流負荷モデル
-#       ・状態：なし
-#       ・入力：２ポート「電流フェーザの実部の倍率,電流フェーザの虚部の倍率」
-#               *入力αのとき値は設定値の(1+α)倍となる．
-#親クラス：componentクラス
-#実行方法：obj = load_current()
-#　引数　：なし
-#　出力　：componentクラスのインスタンス
+    """モデル ：定電流負荷モデル
+      ・状態：なし
+      ・入力：２ポート「電流フェーザの実部の倍率,電流フェーザの虚部の倍率」
+              *入力αのとき値は設定値の(1+α)倍となる．
+親クラス：componentクラス
+実行方法：obj = load_current()
+引数 ：なし
+出力 ：componentクラスのインスタンス
+
+    Args:
+        Component (_type_): _description_
+    """
     def __init__(self):
         self.x_equilibrium = np.zeros([0, 1])
         self.V_equilibrium = None
@@ -19,10 +23,10 @@ class LoadCurrent(Component):
         self.R = np.zeros([0,0])
         self.S = np.array([]).reshape(1, -1)
 
-    def set_equilibrium(self, Veq, Ieq):
+    def set_equilibrium(self, v, i):
         # 複素数表記で平衡点を取得
-        self.V_equilibrium = Veq
-        self.I_equilibrium = Ieq
+        self.V_equilibrium = v
+        self.I_equilibrium = i
 
     def get_dx_constraint(self, I, u, t=None, x=None, V=None):
         dx = np.zeros([0, 1])
@@ -31,7 +35,7 @@ class LoadCurrent(Component):
         return [dx, constraint]
 
     def get_dx_constraint_linear(self, x, V, I, u, t=None):
-        [A, B, C, D, BV, DV, BI, DI, _, _] = self.get_linear_matrix_(x, V)
+        [A, B, C, D, BV, DV, BI, DI, _, _] = self.get_linear_matrix(V, x)
         dx = np.zeros([0, 1])
         diff_I = np.array([[I.real], [I.imag]]) - np.array([[self.I_equilibrium.real], [self.I_equilibrium.imag]])
         diff_V = np.array([[V.real], [V.imag]]) - np.array([[self.V_equilibrium.real], [self.V_equilibrium.imag]])
@@ -42,7 +46,7 @@ class LoadCurrent(Component):
     def get_nu(self):
         return 2
 
-    def get_linear_matrix(self):
+    def get_linear_matrix(self, v, x):
         A = np.zeros([0, 0])
         B = np.zeros([0, 2])
         C = np.zeros([2, 0])
