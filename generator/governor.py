@@ -1,31 +1,33 @@
 from control import StateSpace as SS
 import numpy as np
 
+from utils.typing import FloatArray
+
 class Governor():
     def __init__(self):
-        self.P = None
+        self.P: float = 0
         
         # ここではgovernorのダイナミクスを考慮しない
-        A = np.array([])
-        B = np.array([]).reshape(-1, 1)
-        C = np.array([]).reshape(1, -1)
+        A = np.zeros((0, 0))
+        B = np.zeros((0, 1))
+        C = np.zeros((1, 0))
         D = np.identity(2)
         sys = SS(A, B, C, D)
         SS.set_inputs(sys, ['omega_governor', 'u_governor'])
         SS.set_outputs(sys, ['omega_governor', 'Pmech'])
 
-        self.sys = sys
+        self.sys: SS = sys
 
-    def initialize(self, P):
+    def initialize(self, P: float) -> FloatArray:
         self.P = P
         # governorに状態はない
-        x = np.array([]).reshape(-1, 1)
+        x = np.zeros((0, 1))
         return x
 
     def get_nx(self) -> int:
         return 0
 
-    def get_P(self, u, x_gov=None, omega=None):
+    def get_P(self, u: FloatArray):
         P = self.P + u
         dx = np.array([])
         return [dx, P]

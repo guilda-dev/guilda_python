@@ -1,16 +1,16 @@
 from typing import Optional, Tuple, Union
 import numpy as np
-import pandas as pd
 from math import sin, cos, atan, atan2, sqrt
 from cmath import phase
 import control as ct
 from control import StateSpace as SS
 
+from generator.pss import Pss
 from base.component import Component
 from base.types import StateEquationRecord
-from governor import Governor
+from generator.governor import Governor
 from avr.avr import Avr
-from pss import Pss
+from utils.data import complex_to_col_vec
 
 from utils.typing import FloatArray
 
@@ -47,7 +47,7 @@ class Generator1Axis(Component):
 
         self.__x_eq: FloatArray = np.zeros((0, 0))
         
-        self.alpha_st = None
+        self.alpha_st: FloatArray = np.zeros((0, 0))
         self.avr = Avr()
         self.governor = Governor()
         self.pss = Pss()
@@ -103,13 +103,13 @@ class Generator1Axis(Component):
         x_gen = x[0:nx]
         x_avr = x[nx:nx+nx_avr]
         x_pss = x[nx+nx_avr:nx+nx_avr+nx_pss]
-        x_gov = x[nx+nx_avr+nx_pss:nx+nx_avr+nx_pss+nx_gov]
+        x_gov: FloatArray = x[nx+nx_avr+nx_pss:nx+nx_avr+nx_pss+nx_gov]
 
         Vabs = abs(V)
         Vangle = atan2(V.imag, V.real)
 
-        delta = x_gen[0, 0]
-        omega = x_gen[1, 0]
+        delta: float = x_gen[0, 0]
+        omega: float = x_gen[1, 0]
         E = x_gen[2, 0]
 
         Vabscos = V.real*cos(delta) + V.imag*sin(delta)
@@ -126,7 +126,7 @@ class Generator1Axis(Component):
         [dx_pss, v] = self.pss.get_u(x_pss, omega)
         [dx_avr, Vfd] = self.avr.get_Vfd(
             x_avr=x_avr, Vabs=Vabs, Efd=Efd, u=u[0, 0]-v)
-        [dx_gov, P] = self.governor.get_P(x_gov=x_gov, omega=omega, u=u[1, 0])
+        [dx_gov, P] = self.governor.get_P(u=u[1, 0])
 
         dE = (-Efd + Vfd)/Tdo
         ddelta = omega0*omega
@@ -134,7 +134,7 @@ class Generator1Axis(Component):
                   Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
 
         dE = np.array(dE).reshape(-1, 1)
-        ddelta = np.array(ddelta).reshape(-1, 1)
+        ddelta = np.array([[ddelta]]).reshape(-1, 1)
         domega = np.array(domega).reshape(-1, 1)
         dx_pss = np.array(dx_pss).reshape(-1, 1)
         dx_avr = np.array(dx_avr).reshape(-1, 1)
@@ -144,7 +144,16 @@ class Generator1Axis(Component):
 
         return dx, con
 
-    def get_dx_constraint_linear(self, x, V, I, u, t=None):
+    def get_dx_constraint_linear(
+        self,
+        V: complex = 0,
+        I: complex = 0,
+        x: Optional[FloatArray] = None,
+        u: Optional[FloatArray] = None,
+        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        assert x is not None
+        assert u is not None
+        
         A = self.system_matrix.A 
         B = self.system_matrix.B 
         C = self.system_matrix.C 
@@ -154,11 +163,11 @@ class Generator1Axis(Component):
         BI = self.system_matrix.BI 
         DI = self.system_matrix.DI 
         dx = A @ (x-self.x_equilibrium) + B @ u + \
-            BV @ (V-self.V_equilibrium) + BI @ (I-self.I_equilibrium)
+            BV @ complex_to_col_vec(V-self.V_equilibrium) + BI @ complex_to_col_vec(I-self.I_equilibrium)
         con = C @ (x-self.x_equilibrium) + D @ u + \
-            DV @ (V-self.V_equilibrium) + DI @ (I-self.I_equilibrium)
+            DV @ complex_to_col_vec(V-self.V_equilibrium) + DI @ complex_to_col_vec(I-self.I_equilibrium)
 
-        return [dx, con]
+        return dx, con
 
     def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
         if (x is None or not any(x)) and V is None:
@@ -325,21 +334,30 @@ class Generator1Axis(Component):
         assert idx_u_viin is not None
         assert idx_u_vrin is not None
         
-        A = ss_closed.A
-        B = ss_closed.B[:, int(idx_u_avr): int(idx_u_gov) + 1]
-        C = ss_closed.C
-        D = ss_closed.D[:, SS.find_input(
-            ss_closed, 'u_avr'):SS.find_input(ss_closed, 'u_governor')+1]
-        BV = ss_closed.B[:, SS.find_input(
-            ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
-        DV = ss_closed.D[:, SS.find_input(
-            ss_closed, 'Vrin'):SS.find_input(ss_closed, 'Viin')+1]
+        _A: FloatArray = ss_closed.A # type: ignore
+        _B: FloatArray = ss_closed.B # type: ignore
+        _C: FloatArray = ss_closed.C # type: ignore
+        _D: FloatArray = ss_closed.D # type: ignore
+        
+        A = _A
+        B = _B[:, idx_u_avr: idx_u_gov + 1]
+        C = _C
+        D = _D[:, idx_u_avr: idx_u_gov + 1]
+        
+        BV = _B[:, idx_u_vrin: idx_u_viin + 1]
+        DV = _D[:, idx_u_vrin: idx_u_viin + 1]
+        
         BI = np.zeros([A.shape[0], 2])
         DI = -np.identity(2)
         R = np.array([[]]).reshape(self.get_nx(), -1)
         S = np.array([[]]).reshape(-1, self.get_nx())
 
-        return [A, B, C, D, BV, DV, BI, DI, R, S]
+        return StateEquationRecord(
+            n_x=self.get_nx(), n_u=self.get_nu(),
+            A=A, B=B, C=C, D=D,
+            BV=BV, DV=DV, BI=BI, DI=DI,
+            R=R, S=S
+        )
 
     def set_avr(self, input_avr):
         if issubclass(input_avr, Avr):
