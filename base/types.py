@@ -47,3 +47,12 @@ class StateEquationRecord:
             self.BV, self.DV, self.BI, self.DI, 
             self.R, self.S,
         )
+        
+    def copy(self):
+        return StateEquationRecord(
+            A = self.A, B = self.B, C = self.C, D = self.D, 
+            BV = self.BV, DV = self.DV, BI = self.BI, DI = self.DI, 
+            R = self.R, S = self.S, 
+            n_x = self.n_x, 
+            n_u = self.n_u,
+        )

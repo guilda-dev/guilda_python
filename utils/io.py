@@ -1,7 +1,7 @@
 
 
-from dataclasses import dataclass, fields, asdict, is_dataclass
-from typing import List, Type, TypeVar, Any, Dict, Union, Set, Tuple, Generator, Iterable
+from dataclasses import fields, asdict, is_dataclass
+from typing import Type, TypeVar, Any, Dict, Union, Set, Generator, Iterable
 import pandas as pd
 from pandas import DataFrame
 
@@ -9,8 +9,8 @@ from pandas import DataFrame
 T = TypeVar('T')
 
 
-__cls_cache__: Dict[Type[T], Set[str]] = {}
-__cls_cache_no_case__: Dict[Type[T], Dict[str, str]] = {}
+__cls_cache__: Dict[Type[T], Set[str]] = {} # type: ignore
+__cls_cache_no_case__: Dict[Type[T], Dict[str, str]] = {} # type: ignore
 __warn__: bool = False
 
 # test data
@@ -40,7 +40,9 @@ print([asdict(x) for x in list(from_sheet(TestModel, df, case_sensitive=False))]
 
 '''
 
-def do_warn(val: bool):
+def do_warn(val: bool): 
+    # pylint: disable=W0603
+    global __warn__ 
     if val: 
         __warn__ = True
     else:
@@ -52,13 +54,13 @@ def __print_field_warning(f): return print(
     f'Warning: field {repr(f)} not in class definition.')
 
 
-def __build_cache_case(cls: Type[T]):
+def __build_cache_case(cls: Type[Any]):
     if cls not in __cls_cache__:
         __cls_cache__[cls] = {f.name for f in fields(cls) if f.init}
     return __cls_cache__[cls]
 
 
-def __build_cache_no_case(cls: Type[T]):
+def __build_cache_no_case(cls: Type[Any]):
     if cls not in __cls_cache_no_case__:
         __cls_cache_no_case__[cls] = {
             f.name.lower(): f.name for f in fields(cls) if f.init}
@@ -80,7 +82,7 @@ def from_dict(cls: Type[T], dic: Dict[str, Any], case_sensitive: bool = True) ->
 
 
 def __from_dict_no_case(cls: Type[T], dic: Dict[str, Any]) -> T:
-    cls_fields = __build_cache_no_case(cls)
+    cls_fields: Dict[str, str] = __build_cache_no_case(cls)
     arg_dict: Dict[str, Any] = {}
     for k, v in dic.items():
         kl = k.lower()
@@ -88,6 +90,8 @@ def __from_dict_no_case(cls: Type[T], dic: Dict[str, Any]) -> T:
             arg_dict[cls_fields[kl]] = v
         elif __warn__:
             __print_field_warning(k)
+            
+    return cls(**arg_dict)
 
 
 
@@ -123,11 +127,11 @@ def __as_dict_naive(cls: object) -> Dict[str, Any]:
     ans = {}
     for key in cls.__dir__():
         if not key.startswith('__'):
-            ans[key] = eval('cls.' + key)
+            ans[key] = getattr(cls, key)
     return ans
 
 
-def as_dict(obj: T) -> Dict[str, Any]:
+def as_dict(obj: Any) -> Dict[str, Any]:
     ret: Dict[str, Any]
     if (is_dataclass(obj)):
         ret = asdict(obj)
@@ -136,6 +140,6 @@ def as_dict(obj: T) -> Dict[str, Any]:
     return ret
 
 
-def as_sheet(objs: Iterable[T]) -> DataFrame:
+def as_sheet(objs: Iterable[Any]) -> DataFrame:
     return DataFrame([as_dict(obj) for obj in objs])
     

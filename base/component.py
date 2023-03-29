@@ -13,14 +13,31 @@ class Component(ABC):
         ABC (_type_): _description_
     """
 
-    @AM
+    def __init__(self):
+        self.__v_eq: complex = 0
+        self.__i_eq: complex = 0
+
+    @property
+    def x_equilibrium(self) -> FloatArray:
+        return np.zeros((0, 1))
+    
+    @property
+    def V_equilibrium(self) -> complex:
+        return self.__v_eq
+    
+    @property
+    def I_equilibrium(self) -> complex:
+        return self.__i_eq
+
     def set_equilibrium(self, V: complex, I: complex) -> None:
         """_summary_
 
         Args:
-            V_eq (_type_): _description_
-            I_eq (_type_): _description_
-        """
+            V (complex): voltage at equilibrium
+            I (complex): current at equilibrium
+        """        
+        self.__v_eq = V
+        self.__i_eq = I
 
     @AM
     def get_nx(self) -> int:
@@ -84,12 +101,6 @@ class Component(ABC):
 
 
 class ComponentEmpty(Component):
-
-    def __init__(self):
-        self.x_equilibrium = None
-
-    def set_equilibrium(self, V, I):
-        self.x_equilibrium = np.array([]).reshape(-1, 1)
 
     def get_nx(self) -> int:
         return 0

@@ -62,7 +62,9 @@ def complex_to_matrix(z: complex) -> FloatArray:
     c = z.imag
     return np.array([[r, -c], [c, r]])
 
+
 def complex_to_col_vec(z: complex) -> FloatArray:
     r = z.real
     c = z.imag
     return np.array([[r], [c]])
+

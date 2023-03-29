@@ -22,7 +22,7 @@ class Governor():
         x = np.array([]).reshape(-1, 1)
         return x
 
-    def get_nx(self):
+    def get_nx(self) -> int:
         return 0
 
     def get_P(self, u, x_gov=None, omega=None):

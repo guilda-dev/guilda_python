@@ -14,7 +14,7 @@ class Pss():
         self.B = None
         self.C = None
         self.D = None
-        self.nx = None
+        self.nx = 0
 
         if pss_in == None:
             A = np.array([])
@@ -36,7 +36,7 @@ class Pss():
             except:
                 print("pss_inのパラメータが不足しています")
 
-    def get_nx(self):
+    def get_nx(self) -> int:
         return self.nx
     
     def get_state_name(self):

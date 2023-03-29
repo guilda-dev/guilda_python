@@ -1,8 +1,12 @@
+from typing import Optional, Tuple
 import numpy as np
 
-from base.component import Component
+from base.types import StateEquationRecord
+from load.load import Load
+from utils.data import complex_to_col_vec
+from utils.typing import FloatArray
 
-class LoadCurrent(Component):
+class LoadCurrent(Load):
     """モデル ：定電流負荷モデル
       ・状態：なし
       ・入力：２ポート「電流フェーザの実部の倍率,電流フェーザの虚部の倍率」
@@ -15,38 +19,25 @@ class LoadCurrent(Component):
     Args:
         Component (_type_): _description_
     """
-    def __init__(self):
-        self.x_equilibrium = np.zeros([0, 1])
-        self.V_equilibrium = None
-        self.I_equilibrium = None
-        self.Y = None
-        self.R = np.zeros([0,0])
-        self.S = np.array([]).reshape(1, -1)
 
-    def set_equilibrium(self, v, i):
-        # 複素数表記で平衡点を取得
-        self.V_equilibrium = v
-        self.I_equilibrium = i
 
-    def get_dx_constraint(self, I, u, t=None, x=None, V=None):
-        dx = np.zeros([0, 1])
-        constraint = np.array([[I.real], [I.imag]]) - np.array([[self.I_equilibrium.real * (1 + u[0, 0])], [self.I_equilibrium.imag * (1 + u[1, 0])]])
+    def get_dx_constraint(
+        self,
+        V: complex = 0,
+        I: complex = 0,
+        x: Optional[FloatArray] = None,
+        u: Optional[FloatArray] = None,
+        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        
+        assert u is not None
+        
+        dx = np.zeros((0, 1))
+        constraint = complex_to_col_vec(I) - complex_to_col_vec(self.I_equilibrium) * (1 + u[:2, :1])
 
-        return [dx, constraint]
+        return dx, constraint
 
-    def get_dx_constraint_linear(self, x, V, I, u, t=None):
-        [A, B, C, D, BV, DV, BI, DI, _, _] = self.get_linear_matrix(V, x)
-        dx = np.zeros([0, 1])
-        diff_I = np.array([[I.real], [I.imag]]) - np.array([[self.I_equilibrium.real], [self.I_equilibrium.imag]])
-        diff_V = np.array([[V.real], [V.imag]]) - np.array([[self.V_equilibrium.real], [self.V_equilibrium.imag]])
-        constraint = D@u + DI@diff_I + DV@diff_V
 
-        return [dx, constraint]
-
-    def get_nu(self):
-        return 2
-
-    def get_linear_matrix(self, v, x):
+    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
         A = np.zeros([0, 0])
         B = np.zeros([0, 2])
         C = np.zeros([2, 0])
@@ -58,4 +49,9 @@ class LoadCurrent(Component):
         R = self.R
         S = self.S
 
-        return [A, B, C, D, BV, DV, BI, DI, R, S]
+        return StateEquationRecord(
+            n_x=self.get_nx(), n_u=self.get_nu(),
+            A=A, B=B, C=C, D=D,
+            BV=BV, DV=DV, BI=BI, DI=DI,
+            R=R, S=S
+        )
