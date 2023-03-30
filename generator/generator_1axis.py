@@ -134,7 +134,7 @@ class Generator1Axis(Component):
                   Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
 
         dE = np.array(dE).reshape(-1, 1)
-        ddelta = np.array([[ddelta]]).reshape(-1, 1)
+        ddelta = np.array(ddelta).reshape(-1, 1)
         domega = np.array(domega).reshape(-1, 1)
         dx_pss = np.array(dx_pss).reshape(-1, 1)
         dx_avr = np.array(dx_avr).reshape(-1, 1)

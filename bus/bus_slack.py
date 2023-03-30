@@ -5,12 +5,15 @@ from cmath import phase
 
 
 class BusSlack(Bus):
-    def __init__(self, Vabs, Vangle, shunt):
+    def __init__(self, Vabs: float, Vangle: float, shunt):
         super().__init__(shunt)
-        self.Vabs = Vabs
-        self.Vangle = Vangle
+        self.Vabs: float = Vabs
+        self.Vangle: float = Vangle
 
-    def get_constraint(self, Vr, Vi, P, Q):
-        Vabs = np.array([ norm([Vr, Vi]) ])
-        Vangle = np.array([ phase(complex(Vr, Vi)) ])
-        return np.array([Vabs-self.Vabs, Vangle-self.Vangle])
+    def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
+        Vabs = norm([Vr, Vi])
+        Vangle = phase(complex(Vr, Vi))
+        return np.array([
+            [Vabs-self.Vabs], 
+            [Vangle-self.Vangle]
+        ])

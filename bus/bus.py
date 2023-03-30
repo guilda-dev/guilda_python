@@ -1,15 +1,15 @@
-import numpy as np
-from numpy.linalg import norm
-from cmath import phase
-
 from base.component import Component, ComponentEmpty
 from utils.data import convert_to_complex
 
 from typing import Union, List, Optional
 
+from abc import ABC, abstractmethod as AM
+
+from utils.typing import FloatArray
+
 ComplexOrNumList = Union[complex, List[Union[int, float]]]
 
-class Bus(object):
+class Bus(ABC):
 
     def __init__(self, shunt):
         self.V_equilibrium: Optional[complex] = None
@@ -22,7 +22,7 @@ class Bus(object):
         return len(self.component.x_equilibrium)
 
     def get_nu(self):
-        return len(self.component.get_nu())
+        return self.component.get_nu()
 
     def set_equilibrium(self, Veq: ComplexOrNumList, Ieq: ComplexOrNumList):
         Veq = convert_to_complex(Veq)
@@ -33,15 +33,29 @@ class Bus(object):
         self.component.set_equilibrium(Veq, Ieq)
 
     def set_component(self, component):
-        if isinstance(component, Component):
-            self.component = component
-            if not self.V_equilibrium:
-                return
-            self.component.set_equilibrium(self.V_equilibrium, self.I_equilibrium)
-        else:
+    
+        if not isinstance(component, Component):
             raise TypeError("must be a child of component")
+        
+        self.component = component
+        if not self.V_equilibrium or not self.I_equilibrium:
+            return
+        
+        self.component.set_equilibrium(self.V_equilibrium, self.I_equilibrium)
 
+            
     def set_shunt(self, shunt):
         if type(shunt) == list:
             shunt = complex(shunt[0],shunt[1])
         self.shunt = shunt
+        
+    @AM
+    def get_constraint(self, Vr: float, Vi: float, P: float, Q: float) -> FloatArray:
+        """_summary_
+
+        Args:
+            Vr (_type_): _description_
+            Vi (_type_): _description_
+            P (_type_): _description_
+            Q (_type_): _description_
+        """        
