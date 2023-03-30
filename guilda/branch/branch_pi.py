@@ -2,6 +2,9 @@ import numpy as np
 
 from guilda.branch.branch import Branch
 
+
+from guilda.utils.typing import ComplexArray
+
 class BranchPi(Branch):
     """ モデル ：対地静電容量をもつ送電線のπ型回路モデル
 親クラス：branchクラス
@@ -22,7 +25,7 @@ restrictions: SetAccess = public
         self.x = x
         self.y = y
 
-    def get_admittance_matrix(self):
+    def get_admittance_matrix(self) -> ComplexArray:
         x = self.x
         y = self.y
         Y = np.array(([complex(1/x,y), -1/x          ],

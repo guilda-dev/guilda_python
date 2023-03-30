@@ -2,6 +2,7 @@ import numpy as np
 from numpy import exp
 
 from guilda.branch.branch import Branch
+from guilda.utils.typing import ComplexArray
 
 class BranchPiTransformer(Branch):
     """
@@ -29,7 +30,7 @@ restrictions: SetAccess = public
         self.tap = tap
         self.phase = phase
 
-    def get_admittance_matrix(self):
+    def get_admittance_matrix(self) -> ComplexArray:
         x = self.x
         y = self.y
         t = self.tap

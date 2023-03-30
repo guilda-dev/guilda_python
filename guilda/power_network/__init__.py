@@ -1,1 +1,1 @@
-from guilda.power_network.power_network import PowerNetwork
+from guilda.power_network.wrapper import PowerNetwork

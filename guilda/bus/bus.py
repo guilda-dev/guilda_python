@@ -6,7 +6,7 @@ from guilda.base.component import Component, ComponentEmpty
 from guilda.utils.data import convert_to_complex
 from guilda.utils.typing import FloatArray
 
-ComplexOrNumList = Union[complex, List[Union[int, float]]]
+# ComplexOrNumList = Union[complex, List[Union[int, float]]]
 
 class Bus(ABC):
 
@@ -23,10 +23,7 @@ class Bus(ABC):
     def get_nu(self):
         return self.component.get_nu()
 
-    def set_equilibrium(self, Veq: ComplexOrNumList, Ieq: ComplexOrNumList):
-        Veq = convert_to_complex(Veq)
-        Ieq = convert_to_complex(Ieq)
-        
+    def set_equilibrium(self, Veq: complex, Ieq: complex):
         self.V_equilibrium = Veq
         self.I_equilibrium = Ieq
         self.component.set_equilibrium(Veq, Ieq)
