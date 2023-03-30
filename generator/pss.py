@@ -14,7 +14,7 @@ class Pss():
      引数 ：parameter : pandas.Series型．「'Kpss','Tpss','TL1p','TL1','TL2p','TL2'」を列名として定義
      出力 ：pssクラスのインスタンス
     """
-    def __init__(self, pss_in=Union[PssParameters, SS, None]):
+    def __init__(self, pss_in: Union[PssParameters, SS, None] = None):
 
         self.A: FloatArray = np.zeros((0, 0))
         self.B: FloatArray = np.zeros((0, 1))
