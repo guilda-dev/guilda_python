@@ -21,20 +21,21 @@ restrictions: SetAccess = public
         Branch (_type_): _description_
     """
 
-    def __init__(self, from_, to, x, y, tap, phase):
+    def __init__(self, from_: int, to: int, x: complex, y: complex, tap: float, phase: float):
         super().__init__(from_, to)
-        if type(x) == list:
-            x = complex(x[0], x[1])
-        self.x = x
-        self.y = y
-        self.tap = tap
-        self.phase = phase
+        
+        self.x: complex = x
+        self.y: complex = y
+        self.tap: float = tap
+        self.phase: float = phase
 
     def get_admittance_matrix(self) -> ComplexArray:
         x = self.x
         y = self.y
         t = self.tap
         p = self.phase
-        Y = np.array(([(complex(1/x, y)) / t**2         , - 1 / (x * t * exp(complex(0,-p)))],
-                      [-1 / (x * t * exp(complex(0, p))), complex(1/x, y)]))
+        Y = np.array((
+            [(complex(1/x, y)) / t**2         , - 1 / (x * t * exp(complex(0,-p)))],
+            [-1 / (x * t * exp(complex(0, p))), complex(1/x, y)                   ]
+        ))
         return Y

@@ -1,7 +1,9 @@
 
 from dataclasses import dataclass
-from typing import *
+from typing import List, Tuple, Union, Literal
 import numpy as np
+
+from guilda.power_network.base import _PowerNetwork
 
 @dataclass
 class SimulateOptions:
@@ -26,11 +28,11 @@ class SimulateOptions:
     OutputFcn = []
     tools: bool = False
     
-    def set_parameter_from_pn(self, pn: 'guilda.power_network.power_network.PowerNetwork'):
+    def set_parameter_from_pn(self, pn: _PowerNetwork):
         
-        self.x0_sys = pn.x_equilibrium or 0
-        self.V0 = pn.V_equilibrium or 0
-        self.I0 = pn.I_equilibrium or 0
+        self.x0_sys = pn.x_equilibrium or []
+        self.V0 = pn.V_equilibrium or []
+        self.I0 = pn.I_equilibrium or []
         
         self.x0_con_local = [c.get_x0() for c in pn.a_controller_local]
         self.x0_con_global = [c.get_x0() for c in pn.a_controller_global]

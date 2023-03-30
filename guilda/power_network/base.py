@@ -5,11 +5,12 @@ from scipy.optimize import root
 from scipy.linalg import block_diag
 
 
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Callable
 
 from guilda.bus import Bus
 from guilda.branch import Branch
 from guilda.controller import Controller
+from guilda.utils.math import complex_square_mat_to_float
 
 from guilda.utils.typing import FloatArray, ComplexArray
 
@@ -21,17 +22,41 @@ def f_tmp(t, fs):
     return idx
 
 
-def _sample2f(t, u):
-    if not u or not u[1]:
-        return lambda _: np.array([]).reshape((0, 0))
-    else:
-        if u.shape[0] != len(t) and u.shape[1] == len(t):
-            u = np.array(u).T
+def _sample2f(t: Tuple[float, float], u: FloatArray) -> Callable[[float], FloatArray]:
+    """_summary_
 
-        def ret(T):
-            ind = len(t) - 1 - ([t_ <= T for t_ in t][::-1]).index(True)
-            return u[ind: ind + 1].T
-        return ret
+    Args:
+        t (Tuple[float, float]): _description_
+        u (FloatArray): array (2, n)
+
+    Returns:
+        _type_: _description_
+    """
+    if not u.any() or not u[1].any():
+        return lambda _: np.zeros((0, 0))
+    
+    if u.shape[0] != len(t) and u.shape[1] == len(t):
+        u = np.array(u).T
+
+    def ret(T: float) -> FloatArray:
+        ind = len(t) - 1 - ([t_ <= T for t_ in t][::-1]).index(True)
+        return u[ind: ind + 1].T
+    return ret
+
+def _idx2f_inner(t: float, fault_time: List[Tuple[float, float]], idx_fault: List[List[int]]) -> List[int]:
+    ret: List[int] = []
+    for (ts, i) in zip(fault_time, idx_fault):
+        if (ts[0] <= t and t < ts[1]):
+            ret.extend(i)
+    return ret
+
+
+def _idx2f(fault_time: List[Tuple[float, float]], idx_fault: List[List[int]]) -> Callable[[float], List[int]]:
+    
+    if not fault_time:
+        return lambda _: []
+    
+    return lambda t: _idx2f_inner(t, fault_time, idx_fault)
 
 
 class _PowerNetwork(object):
@@ -142,7 +167,9 @@ class _PowerNetwork(object):
         nd = R.shape[1]
         nu = B.shape[1]
         nz = S.shape[0]
-        [_, Ymat] = self.get_admittance_matrix()
+        Y = self.get_admittance_matrix()
+        Ymat = complex_square_mat_to_float(Y)
+        
 
         A11 = A
         A12 = np.hstack([BV, BI])
@@ -159,14 +186,4 @@ class _PowerNetwork(object):
         D_ = 0-C2 @ inv(A22) @ B2
         return [A_, B_, C_, D_]
 
-    def _idx2f(self, fault_time, idx_fault):
-        if not fault_time:
-            return lambda _: np.array([]).reshape((0, 0))
-        else:
-            if np.ndim(fault_time) != 2:
-                return lambda t: idx_fault if (fault_time[0] <= t and t < fault_time[1]) else np.array([]).reshape((0, 0))
-            else:
-                fs = list(map(lambda time, idx: self._idx2f(
-                    time, idx), fault_time, idx_fault))
-                # fault_timeとidx_faultはlist型
-                return lambda t: f_tmp(t, fs)
+

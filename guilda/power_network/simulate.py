@@ -3,17 +3,42 @@ import numpy as np
 from cmath import phase
 from functools import reduce
 
-from typing import Tuple, List, Union, Dict, Any, Optional
+from typing import Tuple, List, Union, Callable, Any, Optional
 
 from scipy.integrate import ode, odeint
 
-from guilda.power_network.base import _PowerNetwork, _sample2f
+from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
 
 from guilda.power_network.types import SimulateOptions, SimulateResult
 from guilda.power_network.control import get_dx
 
+from guilda.base import ComponentEmpty
+
 from guilda.utils.io import from_dict
 from guilda.utils.data import expand_complex_arr
+from guilda.utils.math import complex_square_mat_to_float
+from guilda.utils.typing import ComplexArray, FloatArray
+
+
+def get_t_simulated(
+    t_cand, 
+    uf: Callable[[float], FloatArray], 
+    fault_f: Callable[[float], List[int]]):
+    has_difference = np.ones((len(t_cand), 1), dtype=bool) 
+    u: FloatArray = np.zeros((0, 0)) 
+    f: List[int] = [] 
+    for i in range(len(t_cand) - 1):
+        unew = uf((t_cand[i] + t_cand[i + 1]) / 2) 
+        fnew = fault_f((t_cand[i] + t_cand[i + 1]) / 2) 
+        if any(unew != u) \
+            or len(f) != len(fnew) \
+            or any([f[i] != fnew[i] for i in range(len(f))]):
+            u = unew
+            f = fnew
+        else:
+            has_difference[i] = False
+    t_simulated = [t_cand[i] for i in range(len(t_cand)) if has_difference[i]]
+    return t_simulated
 
 
 def simulate(
@@ -36,21 +61,25 @@ def simulate(
     if idx_u is None:
         idx_u = []
     
-    out = self.solve_odes(t, u, idx_u,
-                            options.fault,
-                            options.x0_sys,
-                            options.x0_con_global,
-                            options.x0_con_local,
-                            expand_complex_arr(options.V0),
-                            expand_complex_arr(options.I0),
-                            options.linear,
-                            options)
+    out = solve_odes(
+        self, t, u, idx_u,
+        options.fault,
+        options.x0_sys,
+        options.x0_con_global,
+        options.x0_con_local,
+        expand_complex_arr(options.V0),
+        expand_complex_arr(options.I0),
+        options.linear,
+        options
+    )
+    
+    return out
         
 def solve_odes(self: _PowerNetwork, 
-                t, u, idx_u, 
+                t: Tuple[float, float], u, idx_u, 
                 fault: List[Tuple[Tuple[float, float], List[int]]], 
                 x: complex, xkg, xk, 
-                V0: NDArray[np.float64], I0: NDArray[np.float64], 
+                V0: ComplexArray, I0: ComplexArray, 
                 linear: bool, 
                 options: SimulateOptions):
     
@@ -58,22 +87,15 @@ def solve_odes(self: _PowerNetwork,
     controllers_global = self.a_controller_global
     controllers = self.a_controller_local
     
-    fault_time = [x[1] for x in fault]
-    idx_fault: List[List[int]] = [x[2] for x in fault]
+    fault_time: List[Tuple[float, float]] = [x[0] for x in fault]
+    idx_fault: List[List[int]] = [x[1] for x in fault]
     
-    uf = PowerNetwork.__sample2f(t, u)
-    fault_f = PowerNetwork.__idx2f(fault_time, idx_fault)
+    uf = _sample2f(t, u)
+    fault_f = _idx2f(fault_time, idx_fault)
     
-    t_cand = [t] + fault_time
+    t_cand: List[Tuple[float, float]] = [t] + fault_time
+    t_cand = sorted(list(set(t_cand)))
     
-    t_cand_unique = []
-    t_cand_set2 = set()
-    for tt in t_cand:
-        if tt not in t_cand_set2:
-            t_cand_unique.append(tt)
-            t_cand_set2.add(tt)
-    
-    t_cand = t_cand_unique
     
     # :27
     
@@ -83,12 +105,13 @@ def solve_odes(self: _PowerNetwork,
     nx_k = [c.get_nx() for c in controllers]
     
     idx_non_unit = [b for b in bus if isinstance(b.component, ComponentEmpty)]
-    idx_controller: List[Tuple[int, int]] = sorted(list(set([
-        (c.index_observe, c.index_input) 
+    idx_controller: List[Tuple[int, int]] = sorted(list(set(reduce(lambda x, y: [*x, *y], [
+        list(zip(c.index_observe, c.index_input))
         for c in controllers + controllers_global
-    ])))
+    ])))) # unique pairs of observe-input indices
     
-    Y, Ymat_all = self.get_admittance_matrix()
+    Y = self.get_admittance_matrix()
+    Ymat_all = complex_square_mat_to_float(Y)
     
     t_simulated = t_cand
     if options.method == 'zoh':

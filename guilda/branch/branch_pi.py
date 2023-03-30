@@ -17,17 +17,17 @@ class BranchPi(Branch):
 restrictions: SetAccess = public
     """
 
-    def __init__(self, from_, to, x, y):
+    def __init__(self, from_: int, to: int, x: complex, y: complex):
         super().__init__(from_, to)
 
-        if type(x) == list:
-            x = complex(x[0], x[1])
-        self.x = x
-        self.y = y
+        self.x: complex = x
+        self.y: complex = y
 
     def get_admittance_matrix(self) -> ComplexArray:
         x = self.x
         y = self.y
-        Y = np.array(([complex(1/x,y), -1/x          ],
-                      [-1/x          , complex(1/x,y)]))
+        Y = np.array([
+            [complex(1/x,y), -1/x          ],
+            [-1/x          , complex(1/x,y)]
+        ])
         return Y
