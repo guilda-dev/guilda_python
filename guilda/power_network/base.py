@@ -13,8 +13,6 @@ from guilda.controller import Controller
 
 from guilda.utils.typing import FloatArray, ComplexArray
 
-import time
-
 
 def f_tmp(t, fs):
     idx = []
@@ -58,21 +56,12 @@ class _PowerNetwork(object):
         return [b.I_equilibrium for b in self.a_bus]
 
     def add_bus(self, *bus: Bus):
-
-        for b in bus:
-            if isinstance(b, Bus):
-                self.a_bus.append(b)
-            else:
-                raise TypeError(f"Type must a child of Bus but got {type(b)}")
+        self.a_bus.extend(bus)
 
     def add_branch(self, *branch: Branch):
-
-        for b in branch:
-            if isinstance(b, Branch):
-                self.a_branch.append(b)
-            else:
-                raise TypeError(
-                    f"Type must a child of Branch but got {type(b)}")
+        self.a_branch.extend(branch)
+        
+    
 
     def get_admittance_matrix(self, a_index_bus: Optional[List[int]] = None) -> ComplexArray:
         if not a_index_bus:
@@ -84,10 +73,11 @@ class _PowerNetwork(object):
         for br in self.a_branch:
             if (br.from_-1 in a_index_bus) and (br.to-1 in a_index_bus):
                 Y_sub = br.get_admittance_matrix()
-                Y[br.from_-1, br.from_-1] += Y_sub[0, 0]
-                Y[br.from_-1, br.to-1] += Y_sub[0, 1]
-                Y[br.to-1, br.from_-1] += Y_sub[1, 0]
-                Y[br.to-1, br.to-1] += Y_sub[1, 1]
+                f, t = br.from_-1, br.to-1
+                Y[f:f+1, f:f+1] += Y_sub[:1, :1]
+                Y[f:f+1, t:t+1] += Y_sub[:1, 1:]
+                Y[t:t+1, f:f+1] += Y_sub[1:, :1]
+                Y[t:t+1, t:t+1] += Y_sub[1:, 1:]
 
         for idx in a_index_bus:
             Y[idx, idx] += self.a_bus[idx].shunt
@@ -97,9 +87,9 @@ class _PowerNetwork(object):
     def calculate_power_flow(self) -> Tuple[ComplexArray, ComplexArray]:
         n: int = len(self.a_bus)
 
-        def func_eq(Y, x):
-            Vr = np.array([[x[i]] for i in range(0, len(x), 2)])
-            Vi = np.array([[x[i]] for i in range(1, len(x), 2)])
+        def func_eq(Y: ComplexArray, x: FloatArray):
+            Vr = x[0::2]
+            Vi = x[1::2]
             V = Vr + 1j*Vi
 
             I = Y @ V
@@ -107,15 +97,15 @@ class _PowerNetwork(object):
             P = PQhat.real
             Q = PQhat.imag
 
-            out = []
+            out = np.zeros((n * 2, 1))
             for i in range(n):
                 bus = self.a_bus[i]
                 out_i = bus.get_constraint(V[i].real, V[i].imag, P[i], Q[i])
-                out.extend(out_i[:, 0].tolist())
-            return out
+                out[i * 2: i * 2 + 2, :] = out_i
+            return out.flatten()
 
         Y = self.get_admittance_matrix()
-        x0 = [1, 0] * n
+        x0 = np.array([1, 0] * n).reshape((-1, 1))
 
         ans = root(lambda x: func_eq(Y, x), x0, method="hybr")
 

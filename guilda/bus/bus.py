@@ -10,11 +10,12 @@ from guilda.utils.typing import FloatArray
 
 class Bus(ABC):
 
-    def __init__(self, shunt):
+    def __init__(self, shunt: complex):
         self.V_equilibrium: Optional[complex] = None
         self.I_equilibrium: Optional[complex] = None
         self.component: Component = None # type: ignore
         self.set_component(ComponentEmpty())
+        self.shunt: complex = 0
         self.set_shunt(shunt)
 
     def get_nx(self):
@@ -40,9 +41,7 @@ class Bus(ABC):
         self.component.set_equilibrium(self.V_equilibrium, self.I_equilibrium)
 
             
-    def set_shunt(self, shunt):
-        if type(shunt) == list:
-            shunt = complex(shunt[0],shunt[1])
+    def set_shunt(self, shunt: complex):
         self.shunt = shunt
         
     @AM
