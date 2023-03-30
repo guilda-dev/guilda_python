@@ -1,9 +1,9 @@
 import numpy as np
 from cmath import phase
 
-from guilda.load.load_current import LoadCurrent
+from guilda.load import LoadCurrent
 from guilda.power_network import PowerNetwork
-from guilda.bus import BusSlack, BusPV, BusPQ, Bus
+from guilda.bus import BusSlack, BusPV, BusPQ
 from guilda.branch import BranchPi
 
 
@@ -38,6 +38,7 @@ net.add_branch(BranchPi(2, 3, 1/y23, 0))
 
 
 net.initialize()
+
 for idx in range(len(net.a_bus)):
     print(f"bus{idx+1}のVst:{net.a_bus[idx].V_equilibrium}")
     print(f"bus{idx+1}のIst:{net.a_bus[idx].I_equilibrium}")

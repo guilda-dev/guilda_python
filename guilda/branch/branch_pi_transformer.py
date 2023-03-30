@@ -10,7 +10,7 @@ class BranchPiTransformer(Branch):
 親クラス：conntroller
 実行方法：obj = branch_pi_transformer(from, to, x, y, tap, phase)
 引数 ：・from,to: 接続する母線番号
-    ・ x    ：[1*2 double]の配列。インピーダンスの実部、虚部を並べた配列。
+    ・ x    ：complex値。インピーダンスの実部、虚部を並べた配列。
     ・ y    ：double値。対地静電容量の値
     ・ tap  ：double値。電圧の絶対値の変化率
     ・ phase：double値。電圧の偏角の変化量
@@ -21,11 +21,11 @@ restrictions: SetAccess = public
         Branch (_type_): _description_
     """
 
-    def __init__(self, from_: int, to: int, x: complex, y: complex, tap: float, phase: float):
+    def __init__(self, from_: int, to: int, x: complex, y: float, tap: float, phase: float):
         super().__init__(from_, to)
         
         self.x: complex = x
-        self.y: complex = y
+        self.y: float = y
         self.tap: float = tap
         self.phase: float = phase
 

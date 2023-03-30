@@ -75,13 +75,19 @@ def simulate(
     
     return out
         
-def solve_odes(self: _PowerNetwork, 
-                t: Tuple[float, float], u, idx_u, 
-                fault: List[Tuple[Tuple[float, float], List[int]]], 
-                x: complex, xkg, xk, 
-                V0: ComplexArray, I0: ComplexArray, 
-                linear: bool, 
-                options: SimulateOptions):
+def solve_odes(
+    self: _PowerNetwork, 
+    t: Tuple[float, float], 
+    u, 
+    idx_u, 
+    fault: List[Tuple[Tuple[float, float], List[int]]], 
+    x: complex, 
+    xkg, 
+    xk, 
+    V0: ComplexArray, 
+    I0: ComplexArray, 
+    linear: bool, 
+    options: SimulateOptions):
     
     bus = self.a_bus
     controllers_global = self.a_controller_global
