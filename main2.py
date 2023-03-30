@@ -2,15 +2,15 @@ import pandas as pd
 import numpy as np
 from numpy import pi
 
-from power_network import PowerNetwork
-from branch.branch_pi import BranchPi
-from branch.branch_pi_transformer import BranchPiTransformer
-from bus.bus_pq import BusPQ
-from bus.bus_pv import BusPV
-from bus.bus_slack import BusSlack
-from generator.generator_1axis import Generator1Axis
-from avr.avr import Avr
-from load.load_impedance import LoadImpedance
+from guilda.power_network import PowerNetwork
+from guilda.branch.branch_pi import BranchPi
+from guilda.branch.branch_pi_transformer import BranchPiTransformer
+from guilda.bus.bus_pq import BusPQ
+from guilda.bus.bus_pv import BusPV
+from guilda.bus.bus_slack import BusSlack
+from guilda.generator.generator_1axis import Generator1Axis
+from guilda.avr.avr import Avr
+from guilda.load.load_impedance import LoadImpedance
 
 
 mac_data = [[1, 1, 1.569,  0.963,  0.963, 5.14, 100,   10  ],
