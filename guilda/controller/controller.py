@@ -14,8 +14,6 @@ class Controller(ABC):
         _type_: _description_
     """
     
-    get_dx_u_func = None
-
     def __init__(self, index_input: List[int], index_observe: List[int]):
         self.index_input: List[int] = index_input  
         self.index_observe: List[int] = index_observe 
@@ -43,6 +41,26 @@ class Controller(ABC):
         Returns:
             Tuple[FloatArray, FloatArray]: _description_
         """        
+        
+    @AM
+    def get_dx_u_linear(self, t, x, X, V, I, U_global) -> Tuple[FloatArray, FloatArray]:
+        """_summary_
+
+        Args:
+            t (_type_): _description_
+            x (_type_): _description_
+            X (_type_): _description_
+            V (_type_): _description_
+            I (_type_): _description_
+            U_global (_type_): _description_
+
+        Returns:
+            Tuple[FloatArray, FloatArray]: _description_
+        """        
+
+    def get_dx_u_func(self, linear: bool):
+        return self.get_dx_u_linear if linear else self.get_dx_u
+
 
     def get_x0(self) -> FloatArray:
         out = np.zeros((self.get_nx(), 1))  # controller.m:28

@@ -73,12 +73,12 @@ class _PowerNetwork(object):
         return [b.component.x_equilibrium for b in self.a_bus]
 
     @property
-    def V_equilibrium(self):
-        return [b.V_equilibrium for b in self.a_bus]
+    def V_equilibrium(self) -> List[complex]:
+        return [b.V_equilibrium or 0 for b in self.a_bus]
 
     @property
-    def I_equilibrium(self):
-        return [b.I_equilibrium for b in self.a_bus]
+    def I_equilibrium(self) -> List[complex]:
+        return [b.I_equilibrium or 0 for b in self.a_bus]
 
     def add_bus(self, *bus: Bus):
         self.a_bus.extend(bus)

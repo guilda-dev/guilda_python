@@ -1,22 +1,23 @@
 
-from dataclasses import dataclass
-from typing import List, Tuple, Union, Literal
+from dataclasses import dataclass, field
+from typing import List, Tuple, Union, Literal, Any
 import numpy as np
 
 from guilda.power_network.base import _PowerNetwork
+from guilda.utils.typing import ComplexArray, FloatArray
 
 @dataclass
 class SimulateOptions:
     
     linear: bool = False
-    fault: List[Tuple[Tuple[float, float], List[int]]] = []
+    fault: List[Tuple[Tuple[float, float], List[int]]] = field(default_factory = list)
     
-    x0_sys: complex = 0
-    V0: complex = 0
-    I0: complex = 0
+    x0_sys: List[FloatArray] = field(default_factory = list)
+    V0: List[complex] = field(default_factory = list)
+    I0: List[complex] = field(default_factory = list)
     
-    x0_con_local = []
-    x0_con_global = []
+    x0_con_local: List[FloatArray] = field(default_factory = list)
+    x0_con_global: List[FloatArray] = field(default_factory = list)
     
     method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
     AbsTol: float = 1e-8
@@ -25,7 +26,7 @@ class SimulateOptions:
     do_report: bool = False
     do_retry: bool = True
     reset_time: float = np.inf
-    OutputFcn = []
+    OutputFcn: List[Any] = field(default_factory = list)
     tools: bool = False
     
     def set_parameter_from_pn(self, pn: _PowerNetwork):

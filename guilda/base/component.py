@@ -98,6 +98,9 @@ class Component(ABC):
         Returns:
             _type_: _description_
         """
+        
+    def get_dx_con_func(self, linear: bool):
+        return self.get_dx_constraint_linear if linear else self.get_dx_constraint
 
 
 class ComponentEmpty(Component):

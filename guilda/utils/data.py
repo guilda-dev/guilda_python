@@ -22,7 +22,7 @@ def convert_to_complex(obj) -> complex:
         f'{repr(obj)}({type(obj).__name__}) does not have a supported data type.')
 
 
-def expand_complex_arr(arr: NDArray[np.number], axis=0):
+def complex_arr_to_col_vec(arr: NDArray[np.number], axis=0):
     assert isinstance(arr, np.ndarray)
 
     shape = list(arr.shape)
@@ -41,7 +41,7 @@ def expand_complex_arr(arr: NDArray[np.number], axis=0):
     ret[slices_real] = np.real(arr)
     ret[slices_imag] = np.imag(arr)
 
-    return ret
+    return ret.reshape((-1, 1))
 
 
 R = TypeVar('R')
