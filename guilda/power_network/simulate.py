@@ -3,7 +3,7 @@ import numpy as np
 from cmath import phase
 from functools import reduce
 
-from typing import Tuple, List, Union, Callable, Any, Optional
+from typing import Tuple, List, Union, Callable, Any, Optional, Set
 
 from scipy.integrate import ode, odeint
 
@@ -14,7 +14,7 @@ from guilda.power_network.control import get_dx
 
 from guilda.base import ComponentEmpty
 
-from guilda.utils.math import complex_square_mat_to_float
+from guilda.utils.math import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
 from guilda.utils.typing import ComplexArray, FloatArray
 
@@ -39,6 +39,36 @@ def get_t_simulated(
     t_simulated = [t_cand[i] for i in range(len(t_cand)) if has_difference[i]]
     return t_simulated
 
+def reduce_admittance_matrix(Y: ComplexArray, index: Set[int]) -> Tuple[
+    ComplexArray, 
+    FloatArray, 
+    ComplexArray, 
+    FloatArray
+]:
+    
+    n_bus = Y.shape[0]
+    reduced = np.array([i not in index for i in range(n_bus)])
+    n_reduced = np.logical_not(reduced)
+    
+    Y11 = Y[n_reduced][:, n_reduced]
+    Y12 = Y[n_reduced][:, reduced]
+    Y21 = Y[reduced][:, n_reduced]
+    Y22 = Y[reduced][:, reduced]
+    
+    Y_reduced = Y11 - Y12 @ np.linalg.inv(Y22) @ Y21
+    Ymat_reduced = complex_mat_to_float(Y_reduced)
+    
+    nr_n_reduced = int(np.sum(n_reduced))
+    
+    A_reproduce: ComplexArray = np.zeros((n_bus, nr_n_reduced), dtype=complex)
+    A_reproduce[n_reduced] = np.eye(nr_n_reduced)
+    A_reproduce[reduced] = -np.linalg.inv(Y22) @ Y21
+    
+    Amat_reproduce = complex_mat_to_float(A_reproduce)
+    
+    return Y_reduced, Ymat_reduced, A_reproduce, Amat_reproduce
+    
+    
 
 def simulate(
     self: _PowerNetwork, 
@@ -119,16 +149,16 @@ def solve_odes(
     nx_kg = [c.get_nx() for c in controllers_global]
     nx_k = [c.get_nx() for c in controllers]
     
-    idx_non_unit = [b for b in bus if isinstance(b.component, ComponentEmpty)]
+    idx_non_unit = [i for i, b in enumerate(bus) if isinstance(b.component, ComponentEmpty)]
     _idx_controller = [
-        list(zip(c.index_observe, c.index_input))
+        c.index_observe + c.index_input
         for c in controllers + controllers_global
     ]
-    idx_controller: List[Tuple[int, int]] = sorted(list(set(reduce(lambda x, y: [*x, *y], _idx_controller)))) if _idx_controller else [] 
+    idx_controller: List[int] = sorted(list(set(reduce(lambda x, y: [*x, *y], _idx_controller)))) if _idx_controller else [] 
     # idx_controller: unique pairs of observe-input indices
     
     Y = self.get_admittance_matrix()
-    Ymat_all = complex_square_mat_to_float(Y)
+    Ymat_all = complex_mat_to_float(Y)
     
     t_simulated = t_cand
     if options.method == 'zoh':
@@ -156,7 +186,7 @@ def solve_odes(
         f_ = fault_f((t_simulated[i] + t_simulated[i + 1]) / 2)
         except_ = set(list(f_) + idx_controller)
         simulated_bus = set(range(len(bus))) - (set(idx_non_unit) - except_)
-        _, Ymat, __, Ymat_reproduce = self.reduce_admittance_matrix(Y, simulated_bus)
+        _, Ymat, __, Ymat_reproduce = reduce_admittance_matrix(Y, simulated_bus)
         out.simulated_bus[i] = simulated_bus
         out.fault_bus[i] = f_
         out.Ymat_reproduce[i] = Ymat_reproduce

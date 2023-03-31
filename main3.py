@@ -76,19 +76,19 @@ for I in range(len(bus_df)):
     bus_i = bus_df.loc[I]
     shunt = bus_i[['G_shunt', 'B_shunt']].values.tolist()
     if bus_i['type'] == 'slack':
-        b = BusSlack(bus_i['V_abs'], bus_i['V_angle'], shunt)
-        b.set_component(get_generator(I+1))
+        B = BusSlack(bus_i['V_abs'], bus_i['V_angle'], shunt)
+        B.set_component(get_generator(I+1))
     elif bus_i['type'] == 'PV':
-        b = BusPV(bus_i['P_gen'], bus_i['V_abs'], shunt)
-        b.set_component(get_generator(I+1))
+        B = BusPV(bus_i['P_gen'], bus_i['V_abs'], shunt)
+        B.set_component(get_generator(I+1))
     elif bus_i['type'] == 'PQ':
         P, Q = bus_i['P_load'], bus_i['Q_load']
-        b = BusPQ(P, Q, shunt)
+        B = BusPQ(P, Q, shunt)
         if not (P == Q == 0):
             load = LoadImpedance()
-            b.set_component(load)
+            B.set_component(load)
 
-    net.add_bus(b)
+    net.add_bus(B)
 
 
 net.initialize()

@@ -10,7 +10,7 @@ from typing import Tuple, List, Optional, Callable
 from guilda.bus import Bus
 from guilda.branch import Branch
 from guilda.controller import Controller
-from guilda.utils.math import complex_square_mat_to_float
+from guilda.utils.math import complex_mat_to_float
 
 from guilda.utils.typing import FloatArray, ComplexArray
 
@@ -168,7 +168,7 @@ class _PowerNetwork(object):
         nu = B.shape[1]
         nz = S.shape[0]
         Y = self.get_admittance_matrix()
-        Ymat = complex_square_mat_to_float(Y)
+        Ymat = complex_mat_to_float(Y)
         
 
         A11 = A
