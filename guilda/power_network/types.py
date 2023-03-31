@@ -41,13 +41,18 @@ class SimulateOptions:
         # TODO controller
         
         
+        
+EMPTY_ARR = np.zeros((0, 0))
+EMPTY_ARR.setflags(write=False)
 class SimulateResult:
     
     def __init__(self, len_t_simulated: int):
         
-        self.simulated_bus = [None] * (len_t_simulated - 1)
-        self.fault_bus = [None] * (len_t_simulated - 1)
-        self.Ymat_reproduce = [None] * (len_t_simulated - 1)
+        
+        
+        self.simulated_bus: List[List[int]] = [[] for _ in range(len_t_simulated - 1)]
+        self.fault_bus: List[List[int]] = [[] for _ in range(len_t_simulated - 1)]
+        self.Ymat_reproduce: List[FloatArray] = [EMPTY_ARR for _ in range(len_t_simulated - 1)]
         self.t = None
         self.X = self.V = self.I = None
         

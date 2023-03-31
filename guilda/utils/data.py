@@ -56,6 +56,15 @@ def sep_list(lst: List[R], lens: List[int]) -> List[List[R]]:
         ret.append(cells)
     return ret
 
+def sep_col_vec(lst: FloatArray, lens: List[int]) -> List[FloatArray]:
+    idx = 0
+    ret: List[FloatArray] = []
+    for len_ in lens:
+        cells = lst[idx: idx + len_]
+        idx += len_
+        ret.append(cells)
+    return ret
+
 
 def complex_to_matrix(z: complex) -> FloatArray:
     r = z.real

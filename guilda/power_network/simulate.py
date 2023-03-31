@@ -3,7 +3,7 @@ import numpy as np
 from cmath import phase
 from functools import reduce
 
-from typing import Tuple, List, Union, Callable, Any, Optional, Set
+from typing import Tuple, List, Union, Callable, Any, Optional, Iterable
 
 from scipy.integrate import ode, odeint
 
@@ -39,7 +39,7 @@ def get_t_simulated(
     t_simulated = [t_cand[i] for i in range(len(t_cand)) if has_difference[i]]
     return t_simulated
 
-def reduce_admittance_matrix(Y: ComplexArray, index: Set[int]) -> Tuple[
+def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     ComplexArray, 
     FloatArray, 
     ComplexArray, 
@@ -118,7 +118,7 @@ def solve_odes(
     u: FloatArray, # (2, 0)
     idx_u: List[int],
     fault: List[Tuple[Tuple[float, float], List[int]]], 
-    x: List[FloatArray], 
+    x_in: List[FloatArray], 
     xkg: List[FloatArray],
     xk: List[FloatArray],
     V0_in: List[complex], 
@@ -175,7 +175,7 @@ def solve_odes(
     out_V = [None] * (len(t_simulated) - 1)
     out_I = [None] * (len(t_simulated) - 1)
     
-    x0: FloatArray = np.vstack(x + xkg + xk)
+    x0: FloatArray = np.vstack(x_in + xkg + xk)
     V0: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
     I0: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
         
@@ -185,22 +185,24 @@ def solve_odes(
     for i in range(len(t_simulated) - 1):
         f_ = fault_f((t_simulated[i] + t_simulated[i + 1]) / 2)
         except_ = set(list(f_) + idx_controller)
-        simulated_bus = set(range(len(bus))) - (set(idx_non_unit) - except_)
-        _, Ymat, __, Ymat_reproduce = reduce_admittance_matrix(Y, simulated_bus)
+        simulated_bus = sorted(set(range(len(bus))) - (set(idx_non_unit) - except_))
+        _, Ymat, __, Ymat_reproduce \
+            = reduce_admittance_matrix(Y, simulated_bus)
         out.simulated_bus[i] = simulated_bus
         out.fault_bus[i] = f_
         out.Ymat_reproduce[i] = Ymat_reproduce
         
-        idx_simulated_bus = [2 * simulated_bus - 1, 2 * simulated_bus]
-        idx_fault_bus = [[x * 2 - 1, x * 2] for x in f_]
-        idx_fault_bus = reduce(lambda x, y: x + y, idx_fault_bus)
+        idx_simulated_bus: List[int] = [2 * x - 1 for x in simulated_bus] + [ 2 * x for x in simulated_bus]
+        idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2 - 1, x * 2] for x in f_] + [[]])
         
-        x_func = lambda x0: np.hstack([x0, V0[simulated_bus], I0[idx_fault_bus]], dtype=np.float64)
+        x_func = lambda x0: np.vstack([x0, V0[idx_simulated_bus], I0[idx_fault_bus]])
         x = x0
         
-        if options.method == 'zoh':
+        
+        if options.method.lower() == 'zoh':
             u_ = uf((t_simulated[i] + t_simulated[i + 1]) / 2)
             func = lambda t, x: get_dx(
+                linear,
                 bus, controllers_global, controllers, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
                 t, x_func(x), u_, idx_u, f_, simulated_bus
@@ -208,23 +210,22 @@ def solve_odes(
         else:
             us_ = uf(t_simulated[i])
             ue_ = uf(t_simulated[i + 1])
-            u_ = lambda t: (ue_ * (t - t_simulated[i]) + us_ * (t_simulated[i + 1] - t)) / (t_simulated[i + 1] - t_simulated[i])
+            u__ = lambda t: (ue_ * (t - t_simulated[i]) + us_ * (t_simulated[i + 1] - t)) / (t_simulated[i + 1] - t_simulated[i])
             func = lambda t, x: get_dx(
+                linear,
                 bus, controllers_global, controllers, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
-                t, x_func(x), u_(t), idx_u, f_, simulated_bus
+                t, x_func(x), u__(t), idx_u, f_, simulated_bus
             )
             
         # :128
         nx = x0.size
         nVI = x.size - nx
-        nI = f_.size * 2
+        nI = len(f_) * 2
         nV = nVI - nI
         # Mf = block_diag(np.eye(nx), np.zeros(nVI))
         # TODO MASS
         
-        t_now = time.time()
-        r = lambda t, y, flag: reporter.report(t, y, flag, options.reset_time, t_now)
         
         # :138
         sol = odeint(func, x, t_simulated[i: i + 2],
