@@ -184,42 +184,51 @@ def solve_odes(
         t_simulated = get_t_simulated(t_cand, uf, fault_f)
     
     # :45
-    # define simulation result
+    # restore simulation result
     
-    sols = [None] * (len(t_simulated) - 1)
-    # reporter = tools.Reporter(
-    #     t_simulated[0], t_simulated[-1], 
-    #     options.do_report, options.OutputFcn)
-    out_X = [None] * (len(t_simulated) - 1)
-    out_V = [None] * (len(t_simulated) - 1)
-    out_I = [None] * (len(t_simulated) - 1)
+    sols: List[Tuple[float, FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
+    metas: List[Tuple[float, float, List[int], List[int], FloatArray]] = []
+    # TODO add reporter
     
-    x0: FloatArray = np.vstack(x_in + xkg + xk)
-    V0: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
-    I0: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
+    # initial condition
+    
+    x_k: FloatArray = np.vstack(x_in + xkg + xk)
+    V_k: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
+    I_k: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
+    
+    # add initian state as result
+    
         
     # :88
-    out = SimulateResult(len_t_simulated=len(t_simulated))
     
     for i in range(len(t_simulated) - 1):
-        f_ = fault_f((t_simulated[i] + t_simulated[i + 1]) / 2)
+        
+        tstart, tend = t_simulated[i: i + 2]
+        
+        f_ = fault_f((tstart + tend) / 2)
+        
         except_ = set(list(f_) + idx_controller)
         simulated_bus = sorted(set(range(len(bus))) - (set(idx_non_unit) - except_))
         _, Ymat, __, Ymat_reproduce \
             = reduce_admittance_matrix(Y, simulated_bus)
-        out.simulated_bus[i] = simulated_bus
-        out.fault_bus[i] = f_
-        out.Ymat_reproduce[i] = Ymat_reproduce
+        
+        metas.append((
+            tstart, 
+            tend, 
+            simulated_bus, 
+            f_, 
+            Ymat_reproduce
+        ))
         
         idx_simulated_bus: List[int] = [2 * x - 1 for x in simulated_bus] + [ 2 * x for x in simulated_bus]
         idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2 - 1, x * 2] for x in f_] + [[]])
         
-        x_func = lambda x0: np.vstack([x0, V0[idx_simulated_bus], I0[idx_fault_bus]])
-        x = x_func(x0)
         
+        x = np.vstack([x_k, V_k[idx_simulated_bus], I_k[idx_fault_bus]])
         
+
         if options.method.lower() == 'zoh':
-            u_ = uf((t_simulated[i] + t_simulated[i + 1]) / 2)
+            u_ = uf((tstart + tend) / 2)
             func = lambda x, t: get_dx(
                 linear,
                 bus, controllers_global, controllers, Ymat,
@@ -227,9 +236,9 @@ def solve_odes(
                 t, x.reshape((-1, 1)), u_, idx_u, f_, simulated_bus
             ).flatten()
         else:
-            us_ = uf(t_simulated[i])
-            ue_ = uf(t_simulated[i + 1])
-            u__ = lambda t: (ue_ * (t - t_simulated[i]) + us_ * (t_simulated[i + 1] - t)) / (t_simulated[i + 1] - t_simulated[i])
+            us_ = uf(tstart)
+            ue_ = uf(tend)
+            u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
             func = lambda x, t: get_dx(
                 linear,
                 bus, controllers_global, controllers, Ymat,
@@ -238,56 +247,81 @@ def solve_odes(
             ).flatten()
             
         # :128
-        nx = x0.size
+        nx = x_k.size
         nVI = x.size - nx
         nI = len(f_) * 2
         nV = nVI - nI
+        
+        if i == 0:
+            
+            _X = x[:nx, :].T
+            _V = x[nx: nx + nV, :].T @ Ymat_reproduce.T
+            _I = _V @ Ymat_all.T
+            sols.append((
+                tstart, 
+                x,
+                _X,
+                _V,
+                _I,
+            ))
+        
+        
         # Mf = block_diag(np.eye(nx), np.zeros(nVI))
-        # TODO MASS
         
         
         # :138
         # This uses Dormand-Prince method instead of ode15s. 
         # To use ode15s, one must write his own integration.
-        sol_raw = odeint(func, x.flatten(), t_simulated[i: i + 2],
+        # TODO Mass should be added as parameter as well
+        sol = odeint(func, x.flatten(), t_simulated[i: i + 2],
             # method='bdf', order=15,
             atol=options.AbsTol, rtol=options.RelTol, 
-        ).T # (n_x, 2)
-        sol = sol_raw[:, 1:] # get the end solution
-        tend = t_simulated[i + 1]
+        ) # (n_x, 2)
         
         # :143~148
         
-        y = sol[:, -1:]
+        y = sol[-1:].T # get the end solution
         V = y[nx: nx + len(idx_simulated_bus)]
-        x0 = y[0: nx]
-        V0 = Ymat_reproduce @ V
-        I0 = Ymat_all @ V0
-        sols[i] = sol
+        
+        # calculate conditions for the next iteration
+        x_k = y[0: nx]
+        V_k = Ymat_reproduce @ V
+        I_k = Ymat_all @ V_k
         
         X = y[:nx, :].T
         V = y[nx: nx + nV, :].T @ Ymat_reproduce.T
         I = V @ Ymat_all.T
         
-        ifault = np.hstack([f_.flatten() * 2 - 1, f_.flatten() * 2], dtype=np.int)
-        I[:, ifault.flatten()] = y[nx + nv:, :].T
+        ifault = np.array([
+            [x * 2 - 1, x * 2] for x in f_
+        ], dtype=int) # (n_fault, 2)
+        I[:, ifault.flatten()] = y[nx + nV:, :].T
         
-        out_X[i] = X
-        out_V[i] = V
-        out_I[i] = I
         
-    # TODO maybe bug
-    out.t = t_simulated[i: i + 2]
-    X_all = np.vstack(out_X)
-    V_all = np.vstack(out_V)
-    I_all = np.vstack(out_I)
+        sols.append((tend, y, X, V, I))
+        
+    t_all, s_all, x_all, V_all, I_all = [
+        np.array([x[i] for x in sols]) if i == 0 else np.hstack([x[i] for x in sols])
+        for i in range(5)
+    ]
     
-    out.X = [None] * len(self.a_bus)
-    out.V = [V_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
-    out.I = [I_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
+    return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas
     
-    # :170
+    # out = SimulateResult(len_t_simulated=len(t_simulated))
+    
+        
+    # # TODO maybe bug
+    # out.t = t_simulated[i: i + 2]
+    # X_all = np.vstack(out_X)
+    # V_all = np.vstack(out_V)
+    # I_all = np.vstack(out_I)
+    
+    # out.X = [None] * len(self.a_bus)
+    # out.V = [V_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
+    # out.I = [I_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
+    
+    # # :170
     
     
-    return out
+    # return out
     

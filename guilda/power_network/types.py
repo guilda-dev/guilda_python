@@ -40,14 +40,13 @@ class SimulateOptions:
         
         # TODO controller
         
-        
+
         
 EMPTY_ARR = np.zeros((0, 0))
 EMPTY_ARR.setflags(write=False)
 class SimulateResult:
     
     def __init__(self, len_t_simulated: int):
-        
         
         
         self.simulated_bus: List[List[int]] = [[] for _ in range(len_t_simulated - 1)]
