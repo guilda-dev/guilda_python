@@ -39,6 +39,7 @@ def get_t_simulated(
     t_simulated = [t_cand[i] for i in range(len(t_cand)) if has_difference[i]]
     return t_simulated
 
+
 def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     ComplexArray, 
     FloatArray, 
@@ -68,13 +69,28 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     
     return Y_reduced, Ymat_reduced, A_reproduce, Amat_reproduce
     
-    
+
+# Stability not tested!!!
+def solve_ode15s(
+    func: Callable[[FloatArray, float], FloatArray],
+    x0: FloatArray,
+    t_simulated: Tuple[float, float],
+    atol: float = 1e-10, 
+    rtol: float = 1e-10,
+):
+    solver = ode(func).set_integrator('vode', method='bdf', order=15, atol=atol, rtol=rtol)
+    solver.set_initial_value(x0, t_simulated[0])
+    x = x0
+    while solver.successful() and solver.t < t_simulated[1]:
+        x = solver.integrate(t_simulated[1])
+    return x, solver.t
+
 
 def simulate(
     self: _PowerNetwork, 
-    t: Tuple[float, float], 
-    u: Optional[List[FloatArray]] = None, 
-    idx_u: Optional[List[int]] = None, 
+    t: Iterable[float], 
+    u: Optional[FloatArray] = None, # (n_u, n_t)
+    idx_u: Optional[Iterable[int]] = None, 
     options: Optional[SimulateOptions] = None, 
     ):
     
@@ -85,21 +101,25 @@ def simulate(
     options.set_parameter_from_pn(self)
     
     # process u and index of u
-    if u is None:
-        u = []
+    
     if idx_u is None:
         idx_u = []
         
-    if u:
-        u_mat = np.concatenate(u, axis=1)
-    else:
-        u_mat = np.zeros((2, 0))
+    t_list = list(t)
+    n_t = len(t_list)
+    n_u = np.sum([x.get_nu() for x in self.a_bus])
     
+    if u is None:
+        u = np.zeros((n_u, n_t))
+    
+    if u is None or len(u.shape) != 2:
+        raise TypeError(f'u must be 2-dimensional array of shape {(n_u, n_t)}, but got {u.shape}.')
+        
     out = solve_odes(
         self, 
-        t, 
-        u_mat, 
-        idx_u,
+        t_list, 
+        u, 
+        idx_u if isinstance(idx_u, list) else list(idx_u),
         options.fault,
         options.x0_sys,
         options.x0_con_global,
@@ -114,8 +134,8 @@ def simulate(
         
 def solve_odes(
     self: _PowerNetwork, 
-    t: Tuple[float, float], 
-    u: FloatArray, # (2, 0)
+    t: List[float], 
+    u: FloatArray, # (n_u, n_t)
     idx_u: List[int],
     fault: List[Tuple[Tuple[float, float], List[int]]], 
     x_in: List[FloatArray], 
@@ -136,9 +156,8 @@ def solve_odes(
     uf = _sample2f(t, u)
     fault_f = _idx2f(fault_time, idx_fault)
     
-    t_cand_raw: List[Tuple[float, float]] = [t] + fault_time
     t_cand = sorted(list(set(
-        np.array(t_cand_raw).flatten().tolist()
+        np.array(fault_time).flatten().tolist() + t
     )))
     
     
@@ -196,27 +215,27 @@ def solve_odes(
         idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2 - 1, x * 2] for x in f_] + [[]])
         
         x_func = lambda x0: np.vstack([x0, V0[idx_simulated_bus], I0[idx_fault_bus]])
-        x = x0
+        x = x_func(x0)
         
         
         if options.method.lower() == 'zoh':
             u_ = uf((t_simulated[i] + t_simulated[i + 1]) / 2)
-            func = lambda t, x: get_dx(
+            func = lambda x, t: get_dx(
                 linear,
                 bus, controllers_global, controllers, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
-                t, x_func(x), u_, idx_u, f_, simulated_bus
-            )
+                t, x.reshape((-1, 1)), u_, idx_u, f_, simulated_bus
+            ).flatten()
         else:
             us_ = uf(t_simulated[i])
             ue_ = uf(t_simulated[i + 1])
             u__ = lambda t: (ue_ * (t - t_simulated[i]) + us_ * (t_simulated[i + 1] - t)) / (t_simulated[i + 1] - t_simulated[i])
-            func = lambda t, x: get_dx(
+            func = lambda x, t: get_dx(
                 linear,
                 bus, controllers_global, controllers, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
-                t, x_func(x), u__(t), idx_u, f_, simulated_bus
-            )
+                t, x.reshape((-1, 1)), u__(t), idx_u, f_, simulated_bus
+            ).flatten()
             
         # :128
         nx = x0.size
@@ -228,10 +247,13 @@ def solve_odes(
         
         
         # :138
-        sol = odeint(func, x, t_simulated[i: i + 2],
-            method='bdf', order=15,
+        # This uses Dormand-Prince method instead of ode15s. 
+        # To use ode15s, one must write his own integration.
+        sol_raw = odeint(func, x.flatten(), t_simulated[i: i + 2],
+            # method='bdf', order=15,
             atol=options.AbsTol, rtol=options.RelTol, 
-        )
+        ).T # (n_x, 2)
+        sol = sol_raw[:, 1:] # get the end solution
         tend = t_simulated[i + 1]
         
         # :143~148

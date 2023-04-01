@@ -99,29 +99,33 @@ def get_dx(
        idx += nu_bus[i]
         
     
-    dx_component = [None] * len(simulated_bus)
-    constraint = [None] * len(simulated_bus)
+    dx_component: List[FloatArray] = []
+    constraint: List[FloatArray] = []
     
-    for  i, idx in enumerate(simulated_bus):
+    for idx in simulated_bus:
         f = bus[idx].component.get_dx_con_func(linear)
-        dx_component[i], constraint[i] = f(
-            Vall[:,idx],
-            Iall[:,idx],
+        v = Vall[0, idx] + 1j * Vall[1, idx]
+        i = Iall[0, idx] + 1j * Iall[1, idx]
+        dx_i, cs_i = f(
+            v,
+            i,
             x_bus[idx], 
             U_bus[idx],
             t, 
             )
+        dx_component.append(dx_i)
+        constraint.append(cs_i)
         
     dx_algebraic = np.vstack([
-        [constraint], 
+        *constraint, 
         np.reshape(Vall[:, idx_fault], (-1, 1))
-        ], dtype=np.float64)
+        ])
     dx = np.vstack([
-        [dx_component], 
-        [dxkg], 
-        [dxk], 
+        *dx_component, 
+        *dxkg, 
+        *dxk, 
         dx_algebraic,
-    ], dtype=np.float64)
+    ])
 
     return dx
        

@@ -22,18 +22,18 @@ def f_tmp(t, fs):
     return idx
 
 
-def _sample2f(t: Tuple[float, float], u: FloatArray) -> Callable[[float], FloatArray]:
+def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
     """_summary_
 
     Args:
-        t (Tuple[float, float]): _description_
+        t (List[float]): _description_
         u (FloatArray): array (2, n)
 
     Returns:
         _type_: _description_
     """
-    if not u.any() or not u[1].any():
-        return lambda _: np.zeros((0, 0))
+    # if not u.any() or not u[1].any():
+    #     return lambda _: np.zeros((0, 0))
     
     if u.shape[0] != len(t) and u.shape[1] == len(t):
         u = np.array(u).T

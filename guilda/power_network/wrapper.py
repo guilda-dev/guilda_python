@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, List
+from typing import Optional, Iterable
 
 from guilda.power_network.types import SimulateOptions
 from guilda.power_network.base import _PowerNetwork
@@ -11,12 +11,18 @@ class PowerNetwork(_PowerNetwork):
     
     def simulate(
         self, 
-        t: Tuple[float, float], 
-        u: Optional[List[FloatArray]] = None, 
-        idx_u: Optional[List[int]] = None, 
+        t: Iterable[float], 
+        u: Optional[FloatArray] = None, 
+        idx_u: Optional[Iterable[int]] = None, 
         options: Optional[SimulateOptions] = None, 
         ):
         
         return simulate(self, t, u, idx_u, options)
     
-    
+    def print_bus_state(self) -> None:
+        for i, b in enumerate(self.a_bus):
+            print(f"Bus #{i + 1} {type(b)}: ")
+            print(f"  Vst: {b.V_equilibrium}")
+            print(f"  Ist: {b.I_equilibrium}")
+            print(f"  component.Vst: {b.component.V_equilibrium}")
+            print(f"  component.Ist: {b.component.I_equilibrium}")
