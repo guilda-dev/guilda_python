@@ -241,39 +241,13 @@ def solve_odes(
         x = np.vstack([x_k, V_k[idx_simulated_bus], I_k[idx_fault_bus]])
         
         
-        
-        def func_(t: float, x: FloatArray, u: Callable[[float], FloatArray]):
-            pbar_val = (t - ti) / (tf - ti)
-            # pbar.update(pbar_val - pbar.n)
-            
-            ret = get_dx(
-                linear,
-                bus, controllers_global, controllers, Ymat,
-                nx_bus, nx_kg, nx_k, nu_bus,
-                t, x.reshape((-1, 1)), u(t), idx_u, f_, simulated_bus
-            ).flatten()
-            
-            # print(ret.var())
-            
-            return ret
-        
-
-        if options.method.lower() == 'zoh':
-            u_ = uf((tstart + tend) / 2)
-            func = lambda t, x: func_(t, x, lambda _: u_)
-        else:
-            us_ = uf(tstart)
-            ue_ = uf(tend)
-            u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
-            func = lambda t, x: func_(t, x, u__)
-            
         # :128
         nVI = x.size - nx
         nI = len(f_) * 2
         nV = nVI - nI
         
         if i == 0:
-            
+            # add initial value records
             _X = x[:nx, :].T
             _V = x[nx: nx + nV, :].T @ Ymat_reproduce.T
             _I = _V @ Ymat_all.T
@@ -285,21 +259,48 @@ def solve_odes(
                 _I,
             ))
         
-        
         mass = block_diag(np.eye(nx), np.zeros((nVI, nVI)))
+        
+        # define the equation
+        
+        def func_(t: float, x: FloatArray, u: Callable[[float], FloatArray]):
+            pbar_val = (t - ti) / (tf - ti)
+            pbar.update(pbar_val - pbar.n)
+            
+            dx = get_dx(
+                linear,
+                bus, controllers_global, controllers, Ymat,
+                nx_bus, nx_kg, nx_k, nu_bus,
+                t, x.reshape((-1, 1)), u(t), idx_u, f_, simulated_bus
+            )
+            
+            # print(ret.var())
+            
+            return (mass @ dx).flatten()
+        
+
+        if options.method.lower() == 'zoh':
+            u_ = uf((tstart + tend) / 2)
+            func = lambda t, x: func_(t, x, lambda _: u_)
+        else:
+            us_ = uf(tstart)
+            ue_ = uf(tend)
+            u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
+            func = lambda t, x: func_(t, x, u__)
+            
         
         # :138
         # This uses Dormand-Prince method instead of ode15s. s
         # To use ode15s, one must write his own integration.
         
         sol = solve_ivp(func, t_simulated[i: i + 2], x.flatten(),
-            method=options.solver_method, order=options.solver_order,
-            atol=options.atol, rtol=options.rtol, mass=mass
+            method=options.solver_method, # order=options.solver_order,
+            atol=options.atol, rtol=options.rtol, # mass=mass
         ) # (n_x, 2)
         
         # :143~148
         
-        y = sol[-1:].T # get the end solution
+        y = sol.y[:, -1:] # get the end solution
         V = y[nx: nx + len(idx_simulated_bus)]
         
         # calculate conditions for the next iteration
@@ -317,13 +318,14 @@ def solve_odes(
         I[:, ifault.flatten()] = y[nx + nV:, :].T
         
         
-        sols.append((tend, y, X, V, I))
+        sols.append((sol.t[-1], y, X, V, I))
         
     t_all, s_all, x_all, V_all, I_all = [
         np.array([x[i] for x in sols]) if i == 0 else np.hstack([x[i] for x in sols])
         for i in range(5)
     ]
     
+    pbar.update(1)
     pbar.close()
     
     return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas

@@ -42,4 +42,4 @@ result = net.simulate(
     options
 )
 
-
+print(result)
