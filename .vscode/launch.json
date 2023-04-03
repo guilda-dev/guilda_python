@@ -1,0 +1,32 @@
+{
+  // 使用 IntelliSense 了解相关属性。 
+  // 悬停以查看现有属性的描述。
+  // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "simulate",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/test_simulate.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "main2.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main2.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+  ]
+}
