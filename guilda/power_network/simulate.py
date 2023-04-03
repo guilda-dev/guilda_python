@@ -5,7 +5,10 @@ from functools import reduce
 
 from typing import Tuple, List, Union, Callable, Any, Optional, Iterable
 
-from scipy.integrate import ode, odeint
+from scipy.integrate import ode, odeint, solve_ivp
+from scipy.linalg import block_diag
+
+from tqdm import tqdm
 
 from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
 
@@ -17,6 +20,8 @@ from guilda.base import ComponentEmpty
 from guilda.utils.math import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
 from guilda.utils.typing import ComplexArray, FloatArray
+
+
 
 
 def get_t_simulated(
@@ -180,7 +185,7 @@ def solve_odes(
     Ymat_all = complex_mat_to_float(Y)
     
     t_simulated = t_cand
-    if options.method == 'zoh':
+    if options.method.lower() == 'zoh':
         t_simulated = get_t_simulated(t_cand, uf, fault_f)
     
     # :45
@@ -196,10 +201,19 @@ def solve_odes(
     V_k: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
     I_k: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
     
-    # add initian state as result
+    # shape etc.
+    
+    nx = x_k.size
     
         
     # :88
+    
+    
+    pbar = tqdm(total=1)
+    
+    pbar.update(0)
+    ti = t_simulated[0]
+    tf = t_simulated[-1]
     
     for i in range(len(t_simulated) - 1):
         
@@ -220,34 +234,40 @@ def solve_odes(
             Ymat_reproduce
         ))
         
-        idx_simulated_bus: List[int] = [2 * x - 1 for x in simulated_bus] + [ 2 * x for x in simulated_bus]
-        idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2 - 1, x * 2] for x in f_] + [[]])
+        idx_simulated_bus: List[int] = [2 * x for x in simulated_bus] + [2 * x + 1 for x in simulated_bus]
+        idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in f_] + [[]])
         
         
         x = np.vstack([x_k, V_k[idx_simulated_bus], I_k[idx_fault_bus]])
         
-
-        if options.method.lower() == 'zoh':
-            u_ = uf((tstart + tend) / 2)
-            func = lambda x, t: get_dx(
+        
+        
+        def func_(t: float, x: FloatArray, u: Callable[[float], FloatArray]):
+            pbar_val = (t - ti) / (tf - ti)
+            # pbar.update(pbar_val - pbar.n)
+            
+            ret = get_dx(
                 linear,
                 bus, controllers_global, controllers, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
-                t, x.reshape((-1, 1)), u_, idx_u, f_, simulated_bus
+                t, x.reshape((-1, 1)), u(t), idx_u, f_, simulated_bus
             ).flatten()
+            
+            # print(ret.var())
+            
+            return ret
+        
+
+        if options.method.lower() == 'zoh':
+            u_ = uf((tstart + tend) / 2)
+            func = lambda t, x: func_(t, x, lambda _: u_)
         else:
             us_ = uf(tstart)
             ue_ = uf(tend)
             u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
-            func = lambda x, t: get_dx(
-                linear,
-                bus, controllers_global, controllers, Ymat,
-                nx_bus, nx_kg, nx_k, nu_bus,
-                t, x.reshape((-1, 1)), u__(t), idx_u, f_, simulated_bus
-            ).flatten()
+            func = lambda t, x: func_(t, x, u__)
             
         # :128
-        nx = x_k.size
         nVI = x.size - nx
         nI = len(f_) * 2
         nV = nVI - nI
@@ -266,16 +286,15 @@ def solve_odes(
             ))
         
         
-        # Mf = block_diag(np.eye(nx), np.zeros(nVI))
-        
+        mass = block_diag(np.eye(nx), np.zeros((nVI, nVI)))
         
         # :138
-        # This uses Dormand-Prince method instead of ode15s. 
+        # This uses Dormand-Prince method instead of ode15s. s
         # To use ode15s, one must write his own integration.
-        # TODO Mass should be added as parameter as well
-        sol = odeint(func, x.flatten(), t_simulated[i: i + 2],
-            # method='bdf', order=15,
-            atol=options.AbsTol, rtol=options.RelTol, 
+        
+        sol = solve_ivp(func, t_simulated[i: i + 2], x.flatten(),
+            method=options.solver_method, order=options.solver_order,
+            atol=options.atol, rtol=options.rtol, mass=mass
         ) # (n_x, 2)
         
         # :143~148
@@ -293,7 +312,7 @@ def solve_odes(
         I = V @ Ymat_all.T
         
         ifault = np.array([
-            [x * 2 - 1, x * 2] for x in f_
+            [x * 2, x * 2 + 1] for x in f_
         ], dtype=int) # (n_fault, 2)
         I[:, ifault.flatten()] = y[nx + nV:, :].T
         
@@ -304,6 +323,8 @@ def solve_odes(
         np.array([x[i] for x in sols]) if i == 0 else np.hstack([x[i] for x in sols])
         for i in range(5)
     ]
+    
+    pbar.close()
     
     return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas
     

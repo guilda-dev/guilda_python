@@ -20,8 +20,11 @@ class SimulateOptions:
     x0_con_global: List[FloatArray] = field(default_factory = list)
     
     method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
-    AbsTol: float = 1e-8
-    RelTol: float = 1e-8
+    solver_method: str = 'BDF'
+    solver_order: int = 15
+    
+    atol: float = 1e-8
+    rtol: float = 1e-8
     
     do_report: bool = False
     do_retry: bool = True

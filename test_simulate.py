@@ -9,6 +9,13 @@ from guilda.branch import BranchPi
 
 import sample
 
+
+
+np.set_printoptions(
+    precision=6, 
+    suppress=True,
+)
+
 net = sample.simple_3_bus_nishino()
 net.initialize()
 

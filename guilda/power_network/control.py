@@ -23,6 +23,8 @@ def get_dx(
     idx_fault: List[int], 
     simulated_bus: List[int]):
        
+    # print(t)
+       
     n1 = np.sum([nx_bus[b] for b in simulated_bus], dtype=int)
     n2 = np.sum(nx_controller_global, dtype=int)
     n3 = np.sum(nx_controller, dtype=int)
@@ -36,10 +38,10 @@ def get_dx(
     
     ns = n1 + n2 + n3
     V0 = x_all[ns: ns + n4]
-    V = np.reshape(V0, (2, -1))
-    I_fault = np.reshape(x_all[ns + n4: ns + n4 + n5], (2, -1))
+    V = np.reshape(V0, (-1, 2)).T
+    I_fault = np.reshape(x_all[ns + n4: ns + n4 + n5], (-1, 2)).T
     
-    I = np.reshape(Ymat @ V0, (2, -1))
+    I = np.reshape(Ymat @ V0, (-1, 2)).T
     I[:, idx_fault] = I_fault
     
     Vall = np.zeros((2, len(bus)))
