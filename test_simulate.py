@@ -1,14 +1,7 @@
 import numpy as np
-from cmath import phase
-
-from guilda.load import LoadCurrent
-from guilda.power_network import PowerNetwork, SimulateOptions
-from guilda.bus import BusSlack, BusPV, BusPQ
-from guilda.branch import BranchPi
-
+from guilda.power_network import SimulationOptions
 
 import sample
-
 
 
 np.set_printoptions(
@@ -24,7 +17,7 @@ V, I = net.calculate_power_flow()
 
 net.print_bus_state()
 
-options = SimulateOptions(
+options = SimulationOptions(
     
 )
 

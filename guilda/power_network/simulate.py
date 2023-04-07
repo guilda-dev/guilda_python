@@ -1,18 +1,19 @@
+# pylint: disable=W0640
+
 import numpy as np
 
-from cmath import phase
 from functools import reduce
 
-from typing import Tuple, List, Union, Callable, Any, Optional, Iterable
+from typing import Tuple, List, Callable, Optional, Iterable
 
-from scipy.integrate import ode, odeint, solve_ivp
+from scipy.integrate import ode, solve_ivp
 from scipy.linalg import block_diag
 
 from tqdm import tqdm
 
 from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
 
-from guilda.power_network.types import SimulateOptions, SimulateResult
+from guilda.power_network.types import SimulationOptions, SimulationResult, SimulationSegment
 from guilda.power_network.control import get_dx
 
 from guilda.base import ComponentEmpty
@@ -96,12 +97,12 @@ def simulate(
     t: Iterable[float], 
     u: Optional[FloatArray] = None, # (n_u, n_t)
     idx_u: Optional[Iterable[int]] = None, 
-    options: Optional[SimulateOptions] = None, 
+    options: Optional[SimulationOptions] = None, 
     ):
     
     # process options
     if options is None:
-        options = SimulateOptions()
+        options = SimulationOptions()
         
     options.set_parameter_from_pn(self)
     
@@ -149,7 +150,7 @@ def solve_odes(
     V0_in: List[complex], 
     I0_in: List[complex], 
     linear: bool, 
-    options: SimulateOptions):
+    options: SimulationOptions):
     
     bus = self.a_bus
     controllers_global = self.a_controller_global
@@ -191,8 +192,8 @@ def solve_odes(
     # :45
     # restore simulation result
     
-    sols: List[Tuple[float, FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
-    metas: List[Tuple[float, float, List[int], List[int], FloatArray]] = []
+    sols: List[Tuple[FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
+    metas: List[SimulationSegment] = []
     # TODO add reporter
     
     # initial condition
@@ -226,13 +227,13 @@ def solve_odes(
         _, Ymat, __, Ymat_reproduce \
             = reduce_admittance_matrix(Y, simulated_bus)
         
-        metas.append((
-            tstart, 
-            tend, 
-            simulated_bus, 
-            f_, 
-            Ymat_reproduce
-        ))
+        meta = SimulationSegment(
+            time_start = tstart, 
+            time_end = tend, 
+            simulated_bus = simulated_bus, 
+            fault_bus = f_, 
+            impedance_matrix = Ymat_reproduce,
+        )
         
         idx_simulated_bus: List[int] = [2 * x for x in simulated_bus] + [2 * x + 1 for x in simulated_bus]
         idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in f_] + [[]])
@@ -252,8 +253,8 @@ def solve_odes(
             _V = x[nx: nx + nV, :].T @ Ymat_reproduce.T
             _I = _V @ Ymat_all.T
             sols.append((
-                tstart, 
-                x,
+                np.array([tstart]), 
+                # x,
                 _X,
                 _V,
                 _I,
@@ -300,7 +301,7 @@ def solve_odes(
         
         # :143~148
         
-        y = sol.y[:, -1:] # get the end solution
+        y = sol.y[:, 1:] # get the end solution
         V = y[nx: nx + len(idx_simulated_bus)]
         
         # calculate conditions for the next iteration
@@ -317,34 +318,46 @@ def solve_odes(
         ], dtype=int) # (n_fault, 2)
         I[:, ifault.flatten()] = y[nx + nV:, :].T
         
+        if options.save_solution:
+            meta.solution = sol
         
-        sols.append((sol.t[-1], y, X, V, I))
+        metas.append(meta)
+        sols.append((sol.t[1:], X, V, I))
         
-    t_all, s_all, x_all, V_all, I_all = [
-        np.array([x[i] for x in sols]) if i == 0 else np.hstack([x[i] for x in sols])
-        for i in range(5)
+    t_all, x_all, V_all, I_all = [
+        np.concatenate([x[i] for x in sols]) if i == 0 else np.vstack([x[i] for x in sols])
+        for i in range(4)
     ]
     
     pbar.update(1)
     pbar.close()
     
-    return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas
+    # return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas
     
-    # out = SimulateResult(len_t_simulated=len(t_simulated))
+    x_part: List[FloatArray] = []
+    V_part: List[FloatArray] = []
+    I_part: List[FloatArray] = []
     
-        
-    # # TODO maybe bug
-    # out.t = t_simulated[i: i + 2]
-    # X_all = np.vstack(out_X)
-    # V_all = np.vstack(out_V)
-    # I_all = np.vstack(out_I)
+    idx = 0
+    for nx in nx_bus:
+        idx_end = idx + nx
+        x_part.append(x_all[idx: idx_end])
+        V_part.append(V_all[idx: idx_end])
+        I_part.append(I_all[idx: idx_end])
+        idx = idx_end
     
-    # out.X = [None] * len(self.a_bus)
-    # out.V = [V_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
-    # out.I = [I_all[:, i * 2 - 1: i * 2 + 1] for i in range(len(self.a_bus))]
+    out = SimulationResult(
+        t=t_all, 
+        nx_bus=nx_bus,
+        nu_bus=nu_bus,
+        segments=metas,
+        linear=linear,
+        x=x_part, 
+        V=V_part,
+        I=I_part,
+    )
     
-    # # :170
+    # TODO add controller data
     
-    
-    # return out
+    return out
     

@@ -4,10 +4,10 @@ from typing import List, Tuple, Union, Literal, Any
 import numpy as np
 
 from guilda.power_network.base import _PowerNetwork
-from guilda.utils.typing import ComplexArray, FloatArray
+from guilda.utils.typing import FloatArray
 
 @dataclass
-class SimulateOptions:
+class SimulationOptions:
     
     linear: bool = False
     fault: List[Tuple[Tuple[float, float], List[int]]] = field(default_factory = list)
@@ -30,7 +30,9 @@ class SimulateOptions:
     do_retry: bool = True
     reset_time: float = np.inf
     OutputFcn: List[Any] = field(default_factory = list)
+    
     tools: bool = False
+    save_solution: bool = False
     
     def set_parameter_from_pn(self, pn: _PowerNetwork):
         
@@ -43,19 +45,37 @@ class SimulateOptions:
         
         # TODO controller
         
-
+@dataclass
+class SimulationSegment:
+    
+    time_start: float = 0
+    time_end: float = 0
+    
+    simulated_bus: List[int] = field(default_factory=list)
+    fault_bus: List[int] = field(default_factory=list)
+    
+    impedance_matrix: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
+    
+    solution: Any = None
+    
         
 EMPTY_ARR = np.zeros((0, 0))
 EMPTY_ARR.setflags(write=False)
-class SimulateResult:
+
+@dataclass
+class SimulationResult:
     
-    def __init__(self, len_t_simulated: int):
-        
-        
-        self.simulated_bus: List[List[int]] = [[] for _ in range(len_t_simulated - 1)]
-        self.fault_bus: List[List[int]] = [[] for _ in range(len_t_simulated - 1)]
-        self.Ymat_reproduce: List[FloatArray] = [EMPTY_ARR for _ in range(len_t_simulated - 1)]
-        self.t = None
-        self.X = self.V = self.I = None
-        
+    linear: bool = True
+    
+    segments: List[SimulationSegment] = field(default_factory=list)
+    
+    t: FloatArray = field(default_factory=lambda: np.zeros((0,)))
+    nx_bus: List[int] = field(default_factory=list)
+    nu_bus: List[int] = field(default_factory=list)
+    
+    x: List[FloatArray] = field(default_factory=list)
+    V: List[FloatArray] = field(default_factory=list)
+    I: List[FloatArray] = field(default_factory=list)
+    
+    
         

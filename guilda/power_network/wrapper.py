@@ -1,6 +1,6 @@
 from typing import Optional, Iterable
 
-from guilda.power_network.types import SimulateOptions
+from guilda.power_network.types import SimulationOptions
 from guilda.power_network.base import _PowerNetwork
 from guilda.power_network.simulate import simulate
 
@@ -14,7 +14,7 @@ class PowerNetwork(_PowerNetwork):
         t: Iterable[float], 
         u: Optional[FloatArray] = None, 
         idx_u: Optional[Iterable[int]] = None, 
-        options: Optional[SimulateOptions] = None, 
+        options: Optional[SimulationOptions] = None, 
         ):
         
         return simulate(self, t, u, idx_u, options)
