@@ -341,9 +341,9 @@ def solve_odes(
     idx = 0
     for nx in nx_bus:
         idx_end = idx + nx
-        x_part.append(x_all[idx: idx_end])
-        V_part.append(V_all[idx: idx_end])
-        I_part.append(I_all[idx: idx_end])
+        x_part.append(x_all[:, idx: idx_end])
+        V_part.append(V_all[:, idx: idx_end])
+        I_part.append(I_all[:, idx: idx_end])
         idx = idx_end
     
     out = SimulationResult(
