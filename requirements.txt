@@ -12,5 +12,5 @@ pyparsing
 python-dateutil
 pytz
 scipy
-scikit-odes
+scikits.odes
 six

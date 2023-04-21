@@ -20,11 +20,10 @@ class SimulationOptions:
     x0_con_global: List[FloatArray] = field(default_factory = list)
     
     method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
-    solver_method: str = 'RadauDAE'
-    # solver_order: int = 15
+    solver_method: str = 'ida'
     
-    atol: float = 1e-6
-    rtol: float = 1e-6
+    atol: float = 1e-8
+    rtol: float = 1e-8
     
     do_report: bool = False
     do_retry: bool = True

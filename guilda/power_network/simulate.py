@@ -175,7 +175,6 @@ def solve_odes(
 
     sols: List[Tuple[FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
     metas: List[SimulationSegment] = []
-    # TODO add reporter
 
     # initial condition
 
@@ -245,9 +244,13 @@ def solve_odes(
 
         # define the equation
 
-        def func_(t: float, x: FloatArray, u: Callable[[float], FloatArray]):
-            pbar_val = (t - ti) / (tf - ti)
-            pbar.update(pbar_val - pbar.n)
+        def func_(
+            t: float, 
+            x: FloatArray, 
+            u: Callable[[float], FloatArray],
+            xdot: FloatArray,
+            res: FloatArray,
+        ):
 
             dx, con = get_dx_con(
                 linear,
@@ -255,52 +258,40 @@ def solve_odes(
                 nx_bus, nx_kg, nx_k, nu_bus,
                 t, x.reshape((-1, 1)), u(t), idx_u, f_, simulated_bus
             )
-
-            # print(ret.var())
-
-            return dx.flatten(), con.flatten()
+            
+            n = dx.size
+            res[:n] = dx.flatten() - xdot[:n]
+            res[n:] = con.flatten()
+            
+            pbar_val = (t - ti) / (tf - ti)
+            pbar.update(pbar_val - pbar.n)
+            
+            # TODO add reporter?
 
 
         if options.method.lower() == 'zoh':
             u_ = uf((tstart + tend) / 2)
-            func = lambda t, x: func_(t, x, lambda _: u_)
+            func = lambda t, x, dx, res: func_(t, x, lambda _: u_, dx, res)
         else:
             us_ = uf(tstart)
             ue_ = uf(tend)
             u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
-            func = lambda t, x: func_(t, x, u__)
+            func = lambda t, x, dx, res: func_(t, x, u__, dx, res)
 
-
-        def func_dae_rhs(t, y, ydot, res):
-            dy, con = func(t, y)
-            n = dy.size
-            res[:n] = dy - ydot[:n]
-            res[n:] = con
-
-            print(res)
 
 
         # :138
-        # This uses Dormand-Prince method instead of ode15s. s
-        # To use ode15s, one must write his own integration.
-
-        # solver_method = RadauDAE#  if options.solver_method == 'RadauDAE' else options.solver_method
-
-        # sol = solve_ivp_custom(lambda t, x: np.concatenate(func(t, x)), t_simulated[i: i + 2], x.flatten(),
-        #     method=RadauDAE, # order=options.solver_order, # type: ignore
-        #     atol=options.atol, rtol=options.rtol, mass_matrix=mass
-        # ) # (n_x, 2)
 
         solver = dae(
-            'ida', func_dae_rhs,
+            options.solver_method, func,
             compute_initcond='yp0', first_step_size=1e-18,
             atol=options.atol, rtol=options.rtol,
             algebraic_vars_idx=list(range(nx, x.size)),
         )
 
-        dx0_, con0_ = func(0, x.flatten())
-        dx0 = np.concatenate([dx0_, con0_ * 0])
-        sol = solver.solve(t_simulated[i: i + 2], x.flatten(), dx0)
+        x_0 = x.flatten()
+        dx_0 = x_0 * 0 # this will be computed by the solver
+        sol = solver.solve(t_simulated[i: i + 2],x_0, dx_0)
 
         # :143~148
 
@@ -335,7 +326,6 @@ def solve_odes(
     pbar.update(1)
     pbar.close()
 
-    # return (len(t_simulated), t_all, s_all, x_all, V_all, I_all), metas
 
     x_part: List[FloatArray] = []
     V_part: List[FloatArray] = []

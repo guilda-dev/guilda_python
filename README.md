@@ -1,6 +1,6 @@
 # GUILDA Python
 
-#First README.md edit - 2023.02.16
+# First README.md edit - 2023.02.16
 
 This document is under construction, we apologize for any inconveniences that it might cause.
 
@@ -20,22 +20,26 @@ This document is under construction, we apologize for any inconveniences that it
 ***
 
 <a id="anchor1"></a>
+
 ## Description
 
 GUILDA Python is the Python version of the original MATLAB based program [GUILDA](https://github.com/guilda-dev/guilda). While both programs are ment to be equivalent versions of each other, GUILDA is developed in MATLAB and documented in Japanese, while GUILDA Python is developed in Python and documented in English.
 
-GUILDA stands for Grid & Utility Infrastructure Linkage Dynamics Analyzer. 
+GUILDA stands for Grid & Utility Infrastructure Linkage Dynamics Analyzer.
 GUILDA is a numerical simulator platform for smart energy management. The purpose of this program is to provide students and researchers in the field of systems and control engineering with an advanced numerical simulation environment that can be used with minimal knowledge of power systems. To achieve this, it is recommended to use this program in closeness with the textbook ["Power Systems Control Engineering: Systems Theory and MATLAB Simulation"](https://www.coronasha.co.jp/np/isbn/9784339033847/) (only available in its original language, Japanese. The English translation is currently being developed). As in this textbook the authors explain the structure and mathematical fundamentals of power systems in the language of systems and control engineering.
 
 We are devising a way for students to learn the mathematical fundamentals and the construction of a numerical simulation environment in parallel. Through these activities, we aim to establish power systems as one of the familiar benchmark models in the field of systems and control, thereby helping to promote power system reform through the technologies and knowledge in this field.
 
-This is an in-development project by the [Ishizaki Laboratory](https://www.ishizaki-lab.jp/home) at [Tokyo Institute of Technology](https://www.titech.ac.jp/english#) and [Assistant Professor Kawaguchi](http://hashi-lab.ei.st.gunma-u.ac.jp/~hashimotos/member/kawaguchi/en/index.html) of Gunma University. 
+This is an in-development project by：
+- [Ishizaki Laboratory](https://www.ishizaki-lab.jp/home) at [Tokyo Institute of Technology](https://www.titech.ac.jp/english#)
+- [Assistant Professor Takahiro Kawaguchi](http://hashi-lab.ei.st.gunma-u.ac.jp/~hashimotos/member/kawaguchi/en/index.html) of Gunma University.
 
 To learn more visit [here](https://www.ishizaki-lab.jp/guilda).
 
 ***
 
 <a id="anchor2"></a>
+
 ## Functionality
 
 As a numerical simulator platform, GUILDA has the following main capabilities:
@@ -53,6 +57,7 @@ To achieve the above, the following functionalities are present:
 ***
 
 <a id="anchor3"></a>
+
 ## Documentation
 
 Please visit the [official documentation site](https://guilda-dev.github.io/guilda-doc/). In it you will find several tutorials on:
@@ -67,10 +72,19 @@ Additionally, a demonstrative example of implementing, simulating, and adding co
 ***
 
 <a id="anchor4"></a>
-## Requirements
-Python (define minimum version)
 
-Libraries (should we indicate the purpose of each library?):
+## Requirements
+
+- Python version >=3.7
+- C Compiler
+- Fortran Compiler
+- Sundials version >=5.1.0
+
+- It will be used in simulation. See [this page](https://scikits-odes.readthedocs.io/en/stable/installation.html).
+- Alternatively, installing from conda: `conda install -c conda-forge scikits.odes` will ease the process.
+
+Python Libraries (should we indicate the purpose of each library?):
+
 - contourpy version 1.0.6
 - control version0.9.3.post2
 - cycler version 0.11.0
@@ -85,11 +99,13 @@ Libraries (should we indicate the purpose of each library?):
 - python-dateutil version 2.8.2
 - pytz version 2022.7
 - scipy version 1.10.0
+- scikits.odes version 2.7.0
 - six version 1.16.0
 
 ***
 
 <a id="anchor5"></a>
+
 ## Installation
 
 1. Make sure to comply with all the requirements.
@@ -100,6 +116,7 @@ Libraries (should we indicate the purpose of each library?):
 ***
 
 <a id="anchor6"></a>
+
 ## Source Code Explanation
 
 In this section a brief description of the general structure of the source code is provided.
@@ -108,16 +125,16 @@ As a general rule, all classes and functions that are supposed to be called and 
 
 ### Classes
 
-The classes that play a central role in GUILDA Python can be broadly divided into five types: 
+The classes that play a central role in GUILDA Python can be broadly divided into five types:
 
 - [Power network.](https://guilda-dev.github.io/guilda-doc/SourceCode/power_network/)
 - [Branch.](https://guilda-dev.github.io/guilda-doc/SourceCode/branch/)
 - [Busbar.](https://guilda-dev.github.io/guilda-doc/SourceCode/bus/)
 - [Equipment.](https://guilda-dev.github.io/guilda-doc/SourceCode/component/)
 - [Controller.](https://guilda-dev.github.io/guilda-doc/SourceCode/controller/)
- 
+
 These five classes are the main classes from which the rest of classes are derived.
- 
+
 Here, the variables and methods implemented in these five main classes are explained. Other classes are not explained; however, as mentioned before, you can always check the description of the source code of your class of interest.
 
 ### Functions in folder "+function"
@@ -131,6 +148,7 @@ This directory is implemented by GUILDA Python. It stores functions used in the 
 ***
 
 <a id="anchor7"></a>
+
 ## Cite
 
 To cite GUILDA Python please use the following:
@@ -140,6 +158,7 @@ To cite GUILDA Python please use the following:
 ***
 
 <a id="anchor8"></a>
+
 ## License
 
 GUILDA is licensed under the open source [MIT
@@ -148,6 +167,7 @@ License](https://github.com/guilda-dev/guilda/blob/333e544510994a0803767590c7ada
 ***
 
 <a id="anchor9"></a>
+
 ## Acknowledgement
 
 The autors thank the continuous support of
@@ -156,5 +176,5 @@ The autors thank the continuous support of
 ***
 
 <a id="anchor10"></a>
-## Contribute
 
+## Contribute
