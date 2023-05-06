@@ -1,11 +1,11 @@
 from numpy import pi
 
 from guilda.generator.generator_1axis import Generator1Axis
-from guilda.generator.types import GeneratorParameters
+from guilda.generator.types import MachineParameters
 
 omega0 = 60*2*pi
 mac = {'Xd':1.569, 'Xd_prime':0.963, 'Xq':0.963, 'T':5.14, 'M':100, 'D':10}
-mac_pd = GeneratorParameters(**mac)
+mac_pd = MachineParameters(**mac)
 
 component1 = Generator1Axis(omega0, mac_pd)
 

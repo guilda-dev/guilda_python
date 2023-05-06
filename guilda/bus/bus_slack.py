@@ -6,7 +6,7 @@ from guilda.bus.bus import Bus
 
 
 class BusSlack(Bus):
-    def __init__(self, Vabs: float, Vangle: float, shunt):
+    def __init__(self, Vabs: float, Vangle: float, shunt: complex):
         super().__init__(shunt)
         self.Vabs: float = Vabs
         self.Vangle: float = Vangle

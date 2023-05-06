@@ -34,7 +34,7 @@ def get_generator(i):
         raise TypeError("No data for creating generator %s" % i)
     g = Generator1Axis(omega0, mac_i)
     exc_i = excs_df[excs_df['No_bus'] == i]
-    g.set_avr(Avr) # 現状は avr の引数なし
+    g.set_avr(Avr()) # 現状は avr の引数なし
 #    pss_i = pss_df[pss_df['No_bus'] == i]
 #    g.set_pss(pss(pss_i))
     return g

@@ -5,12 +5,14 @@ from typing import Type, TypeVar, Any, Dict, Union, Set, Generator, Iterable
 import pandas as pd
 from pandas import DataFrame
 
+import pkg_resources
+
 
 T = TypeVar('T')
 
 
-__cls_cache__: Dict[Type[T], Set[str]] = {} # type: ignore
-__cls_cache_no_case__: Dict[Type[T], Dict[str, str]] = {} # type: ignore
+__cls_cache__: Dict[Type[T], Set[str]] = {}  # type: ignore
+__cls_cache_no_case__: Dict[Type[T], Dict[str, str]] = {}  # type: ignore
 __warn__: bool = False
 
 # test data
@@ -40,10 +42,11 @@ print([asdict(x) for x in list(from_sheet(TestModel, df, case_sensitive=False))]
 
 '''
 
-def do_warn(val: bool): 
+
+def do_warn(val: bool):
     # pylint: disable=W0603
-    global __warn__ 
-    if val: 
+    global __warn__
+    if val:
         __warn__ = True
     else:
         __warn__ = False
@@ -90,15 +93,14 @@ def __from_dict_no_case(cls: Type[T], dic: Dict[str, Any]) -> T:
             arg_dict[cls_fields[kl]] = v
         elif __warn__:
             __print_field_warning(k)
-            
+
     return cls(**arg_dict)
-
-
 
 
 def from_sheet(cls: Type[T], frm: Union[str, DataFrame], case_sensitive: bool = True, **kwargs) -> Generator[T, None, None]:
     if isinstance(frm, str):
         frm = pd.read_csv(frm, **kwargs)
+    assert isinstance(frm, DataFrame)
     key_map = {x: x for x in frm.keys() if isinstance(x, str)}
 
     if case_sensitive:
@@ -142,4 +144,11 @@ def as_dict(obj: Any) -> Dict[str, Any]:
 
 def as_sheet(objs: Iterable[Any]) -> DataFrame:
     return DataFrame([as_dict(obj) for obj in objs])
-    
+
+
+# package resource handler
+
+
+def get_resource_path(path: str) -> str:
+    data = pkg_resources.resource_filename('guilda', path)
+    return data

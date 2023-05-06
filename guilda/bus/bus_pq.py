@@ -5,7 +5,7 @@ from guilda.bus.bus import Bus
 
 
 class BusPQ(Bus):
-    def __init__(self, P: float, Q: float, shunt):
+    def __init__(self, P: float, Q: float, shunt: complex):
         super().__init__(shunt)
         self.P: float = P
         self.Q: float = Q

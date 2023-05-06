@@ -1,8 +1,20 @@
+from dataclasses import dataclass
 from control import StateSpace as SS
 import numpy as np
 import pandas as pd
 
 from guilda.avr.avr import Avr
+
+
+@dataclass
+class AvrSadamoto2019Parameters:
+    No_bus: int = -1
+    
+    Te: float = 0
+    Ka: float = 0
+    
+    def __post_init__(self):
+        self.No_bus = int(self.No_bus)
 
 class AvrSadamoto2019(Avr):
 # モデル  ：定本先生が2019年の論文で紹介されたモデル
@@ -10,17 +22,18 @@ class AvrSadamoto2019(Avr):
 #実行方法：AvrSadamoto2019(avr_pd)
 # 引数 ：・avr_pd：pandas.Series型の変数。「'Te','Ka'」を列名として定義
 # 出力 ：avrクラスの変数
-    def __init__(self, avr_pd):
+    def __init__(self, avr_pd: AvrSadamoto2019Parameters):
         self.Vfd_st = None
         self.Vabs_st = None
 
-        self.Te = avr_pd['Te']
-        self.Ka = avr_pd['Ka']
+        self.Te: float = avr_pd.Te
+        self.Ka: float = avr_pd.Ka
+        
         [A, B, C, D] = self.get_linear_matrix()
         sys = SS(A, B, C, D)
         SS.set_inputs(sys, ['Vabs', 'Efd', 'u_avr'])
         SS.set_outputs(sys, ['Vfd'])
-        self.sys = sys
+        self.sys: SS = sys
 
     def get_state_name(self):
         return ['Vfield']
@@ -40,7 +53,7 @@ class AvrSadamoto2019(Avr):
         return [dVfd, Vfd]
 
     def get_Vfd_linear(self, Vfd, Vabs, u, Efd=None):
-        return self.get_Vfd(self, Vfd=Vfd, Vabs=Vabs, u=u, Efd=Efd)
+        return self.get_Vfd(Vfd, Vabs, u, Efd=Efd)
 
     def get_linear_matrix(self):
         A = np.array(-1/self.Te).reshape(1, 1)

@@ -1,7 +1,7 @@
 import numpy as np
 from guilda.power_network import SimulationOptions
 
-import sample
+import guilda.models as sample
 
 import matplotlib.pyplot as plt
 
@@ -10,6 +10,8 @@ np.set_printoptions(
     precision=6, 
     suppress=True,
 )
+
+net2 = sample.IEEE68bus()
 
 net = sample.simple_3_bus_nishino()
 net.initialize()

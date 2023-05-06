@@ -12,7 +12,7 @@ from guilda.utils.typing import FloatArray
 
 from guilda.generator.pss import Pss
 from guilda.generator.governor import Governor
-from guilda.generator.types import GeneratorParameters
+from guilda.generator.types import MachineParameters
 
 class Generator1Axis(Component):
     """
@@ -38,10 +38,10 @@ class Generator1Axis(Component):
         return self.__x_eq
     
 
-    def __init__(self, omega: float, parameter: GeneratorParameters):
+    def __init__(self, omega: float, parameter: MachineParameters):
         super().__init__()
         
-        self.parameter: GeneratorParameters = parameter
+        self.parameter: MachineParameters = parameter
 
         self.__x_eq: FloatArray = np.zeros((0, 0))
         
@@ -357,23 +357,17 @@ class Generator1Axis(Component):
             R=R, S=S
         )
 
-    def set_avr(self, input_avr):
-        if issubclass(input_avr, Avr):
-            self.avr = input_avr()
-        else:
-            raise TypeError('input_avr must be subclass of Avr class')
+    def set_avr(self, input_avr: Avr):
+        assert isinstance(input_avr, Avr), 'input_avr must be subclass of Avr class'
+        self.avr = input_avr
 
-    def set_pss(self, input_pss):
-        if issubclass(input_pss, Pss):
-            self.pss = input_pss()
-        else:
-            raise TypeError('input_pss must be subclass of Pss class')
+    def set_pss(self, input_pss: Pss):
+        assert isinstance(input_pss, Pss), 'input_pss must be subclass of Pss class'
+        self.pss = input_pss
 
-    def set_governor(self, input_gov):
-        if issubclass(input_gov, Governor):
-            self.governor = input_gov()
-        else:
-            raise TypeError('input_gov must be subclass of Governor class')
+    def set_governor(self, input_gov: Governor):
+        assert isinstance(input_gov, Governor), 'input_gov must be subclass of Governor class'
+        self.governor = input_gov
 
     def set_linear_matrix(self, Veq: complex = 0, xeq: Optional[FloatArray] = None):
         if self.omega0 == None:

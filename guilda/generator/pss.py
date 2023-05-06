@@ -25,8 +25,8 @@ class Pss():
 
         if isinstance(pss_in, PssParameters) or isinstance(pss_in, SS):
             self.set_pss(pss_in)
-        elif pss_in is not None:
-            raise Exception("pss_inのパラメータが不足しています")
+        else:
+            assert pss_in is None, "pss_inのパラメータが不足しています"
 
         sys = SS(self.A, self.B, self.C, self.D)
         SS.set_inputs(sys, ['omega'])

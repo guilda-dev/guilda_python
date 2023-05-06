@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from guilda.bus.bus import Bus
 
 class BusPV(Bus):
-    def __init__(self, P: float, Vabs: float, shunt):
+    def __init__(self, P: float, Vabs: float, shunt: complex):
         super().__init__(shunt)
         self.P: float = P
         self.Vabs: float = Vabs

@@ -1,12 +1,12 @@
-from typing import Union, List, Optional
+from typing import Optional
 
 from abc import ABC, abstractmethod as AM
 
 from guilda.base.component import Component, ComponentEmpty
-from guilda.utils.data import convert_to_complex
 from guilda.utils.typing import FloatArray
 
 # ComplexOrNumList = Union[complex, List[Union[int, float]]]
+
 
 class Bus(ABC):
 
