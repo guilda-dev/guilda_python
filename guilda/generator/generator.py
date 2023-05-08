@@ -4,6 +4,7 @@ from math import sin, cos, atan, atan2
 from cmath import phase
 
 from guilda.base import Component, StateEquationRecord
+from guilda.avr import Avr
 from guilda.utils import as_dict
 from guilda.utils.typing import FloatArray
 
