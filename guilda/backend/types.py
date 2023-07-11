@@ -1,4 +1,5 @@
-from typing import Union, Literal, Any, Iterable, List, Tuple
+from typing import Union, Literal, Any, Iterable, Optional, Tuple
+from numpy.typing import ArrayLike
 from abc import ABC, abstractmethod as AM
 
 KernelType = Union[
@@ -14,6 +15,12 @@ BitLenType = Union[
     Literal[64]
 ]
 
+ShapeLike = Tuple[int, ...]
+ShapeLike1 = Tuple[int]
+ShapeLike2 = Tuple[int, int]
+
+NumberLike = Union[bool, int, float, complex]
+
 class GuildaBackendProtocol(ABC):
     
     # cannot change since assigned
@@ -27,6 +34,61 @@ class GuildaBackendProtocol(ABC):
         super().__init__()
         self.__bitlen = bitlen
         
+    @AM
+    def array(self, object: ArrayLike) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def zeros(self, shape: ShapeLike) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def ones(self, shape: ShapeLike) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def identity(self, shape: int) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def rvec(self, object: Iterable[NumberLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def cvec(self, object: Iterable[NumberLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def diag(self, object: Iterable[NumberLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def hstack(self, tup: Iterable[ArrayLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def vstack(self, tup: Iterable[ArrayLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def dstack(self, tup: Iterable[ArrayLike]) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def concatenate(self, tup: Iterable[ArrayLike], axis: int = -1) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def inv(self, object: ArrayLike) -> 'ArrayProtocol':
+        pass
+    
+    @AM
+    def arange(self, start: NumberLike, stop: NumberLike, step: NumberLike) -> 'ArrayProtocol':
+        pass
+
+    
+
+# TODO use PYI syntax
 
 class ArrayProtocol:
     
@@ -45,10 +107,10 @@ class ArrayProtocol:
     def __iter__(self) -> Iterable:
         raise NotImplementedError()
 
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> ShapeLike:
         raise NotImplementedError()
 
-    def reshape(self, *shape: int) -> 'ArrayProtocol':
+    def reshape(self, *shape: Union[int, ShapeLike]) -> 'ArrayProtocol':
         raise NotImplementedError()
 
     def flatten(self) -> 'ArrayProtocol':
