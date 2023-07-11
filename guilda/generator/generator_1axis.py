@@ -49,7 +49,7 @@ class Generator1Axis(Generator):
         Xd = self.parameter.Xd
         Xdp = self.parameter.Xd_prime
         Xq = self.parameter.Xq
-        Tdo = self.parameter.T
+        Tdo = self.parameter.Tdo
         M = self.parameter.M
         d = self.parameter.D
 
