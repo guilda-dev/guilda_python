@@ -4,7 +4,7 @@ from guilda.load import LoadCurrent, LoadImpedance
 from guilda.power_network import PowerNetwork
 from guilda.bus import BusSlack, BusPV, BusPQ
 from guilda.branch import BranchPi
-from guilda.generator import Generator1Axis, MachineParameters
+from guilda.generator import Generator1Axis, GeneratorParameters
 
 
 def simple_3_bus():
@@ -46,11 +46,11 @@ def simple_3_bus_nishino():
     
     omega0 = np.pi * 60 * 2
     
-    component1 = Generator1Axis(omega0, MachineParameters(
+    component1 = Generator1Axis(omega0, GeneratorParameters(
         Xd = 1.569, Xd_prime = 0.963, Xq = 0.963, T = 5.14, M = 100, D = 10,
     ))
     
-    component2 = Generator1Axis(omega0, MachineParameters(
+    component2 = Generator1Axis(omega0, GeneratorParameters(
         Xd = 1.220, Xd_prime = 0.667, Xq = 0.667, T = 8.97, M = 12, D = 10,
     ))
     

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 @dataclass
-class MachineParameters:
+class GeneratorParameters:
     
     No_machine: int = -1
     No_bus: int = -1

@@ -30,11 +30,11 @@ class Generator2Axis(Generator1Axis):
     
     
 
-    def _get_self_x_name(self) -> List[str]:
-        return super()._get_self_x_name() + ['Ed']
+    def get_self_x_name(self) -> List[str]:
+        return super().get_self_x_name() + ['Ed']
 
-    def _get_self_nx(self):
-        return super()._get_self_nx() + 1
+    def nx_gen(self):
+        return super().nx_gen() + 1
 
     # def get_dx_constraint(
     #     self,
@@ -90,18 +90,18 @@ class Generator2Axis(Generator1Axis):
     #     [dx_gov, P] = self.governor.get_P(u=u[1, 0])
 
     #     dE = (-Efd + Vfd)/Tdo
-    #     ddelta_: float = self.omega0*omega
-    #     domega_: float = (P - d*omega - Vabs*E*sin(delta-Vangle)/Xdp +
+    #     dDelta_: float = self.omega0*omega
+    #     dOmega_: float = (P - d*omega - Vabs*E*sin(delta-Vangle)/Xdp +
     #               Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
 
     #     dE = np.array(dE).reshape(-1, 1)
-    #     ddelta = np.array(ddelta_).reshape(-1, 1)
-    #     domega = np.array(domega_).reshape(-1, 1)
+    #     dDelta = np.array(dDelta_).reshape(-1, 1)
+    #     dOmega = np.array(dOmega_).reshape(-1, 1)
     #     dx_pss = np.array(dx_pss).reshape(-1, 1)
     #     dx_avr = np.array(dx_avr).reshape(-1, 1)
     #     dx_gov = np.array(dx_gov).reshape(-1, 1)
 
-    #     dx = np.vstack((ddelta, domega, dE, dx_avr, dx_pss, dx_gov))
+    #     dx = np.vstack((dDelta, dOmega, dE, dx_avr, dx_pss, dx_gov))
 
     #     return dx, con
 

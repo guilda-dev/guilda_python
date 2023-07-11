@@ -4,7 +4,7 @@ import numpy as np
 from typing import Dict, TypeVar, Type, List
 from guilda.bus import BusParameters, BusSlack, BusPV, BusPQ
 from guilda.branch import BranchParameters, BranchPi, BranchPiTransformer, Branch
-from guilda.generator import MachineParameters, PssParameters, Generator1Axis, Pss
+from guilda.generator import GeneratorParameters, PssParameters, Generator1Axis, Pss
 from guilda.avr import AvrSadamoto2019Parameters, AvrSadamoto2019
 
 from guilda.load import LoadImpedance
@@ -21,11 +21,11 @@ def _r(type: Type[T], path: str) -> List[T]:
 
 buses = _r(BusParameters, 'bus.csv')
 branches = _r(BranchParameters, 'branch.csv')
-machineries = _r(MachineParameters, 'machinery.csv')
+machineries = _r(GeneratorParameters, 'machinery.csv')
 excitations = _r(AvrSadamoto2019Parameters, 'excitation.csv')
 pss_data = _r(PssParameters,  'pss.csv')
 
-gen_by_bus: Dict[int, List[MachineParameters]] = defaultdict(list) # type: ignore
+gen_by_bus: Dict[int, List[GeneratorParameters]] = defaultdict(list) # type: ignore
 for machinery in machineries:
     gen_by_bus[machinery.No_bus].append(machinery)
     

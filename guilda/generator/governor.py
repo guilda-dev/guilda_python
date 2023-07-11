@@ -29,9 +29,9 @@ class Governor(object):
     def nx(self) -> int:
         return 0
 
-    def get_P(self, u: FloatArray):
-        P: FloatArray = self.P + u
-        dx: FloatArray = np.array([])
+    def get_P(self, x: FloatArray, u: FloatArray):
+        P: float = self.P + u[0, 0]
+        dx: FloatArray = np.zeros((0, 1))
         return (dx, P)
 
     def get_sys(self) -> SS:

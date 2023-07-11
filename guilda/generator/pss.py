@@ -48,7 +48,7 @@ class Pss():
     def get_u(self, x_pss: FloatArray, omega: float) -> Tuple[FloatArray, FloatArray]:
         dx = self.A @ x_pss + self.B * omega
         u = self.C @ x_pss + self.D * omega
-        return (dx, u)
+        return dx, u
 
     def initialize(self) -> FloatArray:
         x: FloatArray = np.zeros((self.nx, 1))

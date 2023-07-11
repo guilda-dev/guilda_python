@@ -1,10 +1,12 @@
 from control import StateSpace as SS
 import numpy as np
 
+from guilda.utils.typing import FloatArray
+
 class Avr():
     def __init__(self):
-        self.Vfd_st = None
-        self.Vabs_st = None
+        self.Vfd_st: complex = 0
+        self.Vabs_st: float = 0
 
         # ここではavrのダイナミクスを考慮しない
         A = np.array([])
@@ -22,17 +24,17 @@ class Avr():
         # このavrには状態がない
         return 0
 
-    def initialize(self, Vfd, Vabs):
+    def initialize(self, Vfd: complex, Vabs: float):
         self.Vfd_st = Vfd
         self.Vabs_st = Vabs
         # 状態がない
         x = np.zeros((0, 1))
         return x
 
-    def get_Vfd(self, u, x_avr=None, Vabs=None, Efd=None):
-        Vfd = self.Vfd_st + u
-        dx = []
-        return [dx, Vfd]
+    def get_Vfd(self, u: FloatArray, x_avr=None, Vabs=None, Efd=None):
+        Vfd = self.Vfd_st + u[0, 0]
+        dx = np.zeros((0, 1))
+        return dx, Vfd
 
     def get_sys(self):
         sys = self.sys
