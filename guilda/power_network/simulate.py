@@ -15,7 +15,7 @@ from guilda.power_network.control import get_dx_con
 
 from guilda.base import ComponentEmpty
 
-from guilda.utils.math import complex_mat_to_float
+from guilda.utils.calc import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
 from guilda.utils.typing import ComplexArray, FloatArray
 
@@ -94,7 +94,7 @@ def simulate(
 
     t_list = list(t)
     n_t = len(t_list)
-    n_u = np.sum([x.get_nu() for x in self.a_bus])
+    n_u = np.sum([x.nu for x in self.a_bus])
 
     if u is None:
         u = np.zeros((n_u, n_t))
@@ -150,10 +150,10 @@ def solve_odes(
 
     # :27
 
-    nx_bus = [b.get_nx() for b in bus]
-    nu_bus = [b.get_nu() for b in bus]
-    nx_kg = [c.get_nx() for c in controllers_global]
-    nx_k = [c.get_nx() for c in controllers]
+    nx_bus = [b.nx for b in bus]
+    nu_bus = [b.nu for b in bus]
+    nx_kg = [c.nx for c in controllers_global]
+    nx_k = [c.nx for c in controllers]
 
     idx_non_unit = [i for i, b in enumerate(bus) if isinstance(b.component, ComponentEmpty)]
     _idx_controller = [

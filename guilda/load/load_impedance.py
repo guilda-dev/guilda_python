@@ -60,7 +60,7 @@ class LoadImpedance(Load):
         DI = -np.identity(2)
         
         return StateEquationRecord(
-            n_x=self.get_nx(), n_u=self.get_nu(),
+            nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
             BV=BV, DV=DV.astype(BV.dtype), BI=BI, DI=DI,
             R=R, S=S

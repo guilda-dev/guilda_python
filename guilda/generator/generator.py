@@ -88,12 +88,18 @@ Actually, it is the classical model
     def _get_self_nx(self):
         return 2
 
-    def get_nx(self):
-        out = self._get_self_nx() + self.avr.get_nx() + self.pss.get_nx() + self.governor.get_nx()
+    @property
+    def nx(self):
+        out = self._get_self_nx() + self.avr.nx + self.pss.nx + self.governor.nx
         return out
 
-    def get_nu(self):
+    @property
+    def nu(self):
         return 2
+    
+    @property
+    def nl(self):
+        return 0
 
 
     def get_dx_constraint(
@@ -114,9 +120,9 @@ Actually, it is the classical model
         d = self.parameter.D
         
         nx = self._get_self_nx()
-        nx_avr = self.avr.get_nx()
-        nx_pss = self.pss.get_nx()
-        nx_gov = self.governor.get_nx()
+        nx_avr = self.avr.nx
+        nx_pss = self.pss.nx
+        nx_gov = self.governor.nx
 
         x_gen: FloatArray = x[0:nx]
         x_avr: FloatArray = x[nx:nx+nx_avr]

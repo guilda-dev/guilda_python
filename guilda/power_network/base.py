@@ -10,7 +10,7 @@ from typing import Tuple, List, Optional, Callable
 from guilda.bus import Bus
 from guilda.branch import Branch
 from guilda.controller import Controller
-from guilda.utils.math import complex_mat_to_float
+from guilda.utils.calc import complex_mat_to_float
 
 from guilda.utils.typing import FloatArray, ComplexArray
 

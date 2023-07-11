@@ -46,7 +46,7 @@ class LoadVoltage(Load):
         S = self.S
 
         return StateEquationRecord(
-            n_x=self.get_nx(), n_u=self.get_nu(),
+            nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
             BV=BV, DV=DV, BI=BI, DI=DI,
             R=R, S=S

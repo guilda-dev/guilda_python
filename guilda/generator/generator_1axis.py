@@ -55,9 +55,9 @@ class Generator1Axis(Generator):
         
         nx = self._get_self_nx()
         
-        nx_avr = self.avr.get_nx()
-        nx_pss = self.pss.get_nx()
-        nx_gov = self.governor.get_nx()
+        nx_avr = self.avr.nx
+        nx_pss = self.pss.nx
+        nx_gov = self.governor.nx
 
         x_gen = x[0:nx]
         x_avr = x[nx:nx+nx_avr]
@@ -214,9 +214,9 @@ class Generator1Axis(Generator):
 
         # sys_fbの直達行列(4×4)
         D_fb = np.concatenate([dP, dEfd, KI], axis=0)
-        A_fb = np.array([]).reshape(1, -1)
-        B_fb = np.array([]).reshape(-1, 4)
-        C_fb = np.array([]).reshape(4, -1)
+        A_fb = np.zeros((1, 0))
+        B_fb = np.zeros((0, 4))
+        C_fb = np.zeros((4, 0))
         sys_fb = SS(A_fb, B_fb, C_fb, D_fb)
 
         fb_inputs = ['delta', 'E', 'Vr', 'Vi']
@@ -228,9 +228,9 @@ class Generator1Axis(Generator):
         # sys_Vの直達行列(3×2)
         D_V = np.concatenate([np.identity(2), np.array(
             [V.real, V.imag]).reshape(1, -1)/Vabs], axis=0)
-        A_V = np.array([]).reshape(1, -1)
-        B_V = np.array([]).reshape(-1, 2)
-        C_V = np.array([]).reshape(3, -1)
+        A_V = np.zeros((1, 0))
+        B_V = np.zeros((0, 2))
+        C_V = np.zeros((3, 0))
         sys_V = SS(A_V, B_V, C_V, D_V)
 
         V_inputs = ['Vrin', 'Viin']
@@ -308,11 +308,11 @@ class Generator1Axis(Generator):
         
         BI = np.zeros([A.shape[0], 2])
         DI = -np.identity(2)
-        R = np.array([[]]).reshape(self.get_nx(), -1)
-        S = np.array([[]]).reshape(-1, self.get_nx())
+        R = np.array([[]]).reshape(self.nx, -1)
+        S = np.array([[]]).reshape(-1, self.nx)
 
         return StateEquationRecord(
-            n_x=self.get_nx(), n_u=self.get_nu(),
+            nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
             BV=BV, DV=DV, BI=BI, DI=DI,
             R=R, S=S

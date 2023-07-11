@@ -51,10 +51,16 @@ class Load(Component):
         constraint: FloatArray = E.D @ u + E.DI @ diff_I + E.DV @ diff_V
         return dx, constraint
       
-    def get_nx(self):
+    @property
+    def nx(self):
         return 0
 
-    def get_nu(self):
+    @property
+    def nu(self):
         return 2
+    
+    @property
+    def nl(self):
+        return 0
 
 

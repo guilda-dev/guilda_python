@@ -8,8 +8,8 @@ class Avr():
 
         # ここではavrのダイナミクスを考慮しない
         A = np.array([])
-        B = np.array([]).reshape(-1, 3)
-        C = np.array([]).reshape(1, -1)
+        B = np.zeros((0, 3))
+        C = np.zeros((1, 0))
         D = np.array([0, 0, 1])
         sys = SS(A, B, C, D)
         SS.set_inputs(sys, ['Vabs', 'Efd', 'u_avr'])
@@ -17,7 +17,8 @@ class Avr():
 
         self.sys = sys
 
-    def get_nx(self) -> int:
+    @property
+    def nx(self) -> int:
         # このavrには状態がない
         return 0
 
@@ -25,7 +26,7 @@ class Avr():
         self.Vfd_st = Vfd
         self.Vabs_st = Vabs
         # 状態がない
-        x = np.array([]).reshape(-1, 1)
+        x = np.zeros((0, 1))
         return x
 
     def get_Vfd(self, u, x_avr=None, Vabs=None, Efd=None):
@@ -38,7 +39,7 @@ class Avr():
         return sys
 
     def get_state_name(self):
-        nx = self.get_nx()
+        nx = self.nx
         name_tag = []
         if nx != 0:
             name_tag = ['state_avr' + str(i+1) for i in range(nx)]

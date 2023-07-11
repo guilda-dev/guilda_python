@@ -21,7 +21,7 @@ class Pss():
         self.B: FloatArray = np.zeros((0, 1))
         self.C: FloatArray = np.zeros((1, 0))
         self.D: FloatArray = np.zeros([1, 1])
-        self.nx: int = 0
+        self._nx: int = 0
 
         if isinstance(pss_in, PssParameters) or isinstance(pss_in, SS):
             self.set_pss(pss_in)
@@ -34,11 +34,12 @@ class Pss():
         self.set_pss(sys)
         self.sys: SS = sys
 
-    def get_nx(self) -> int:
-        return self.nx
+    @property
+    def nx(self) -> int:
+        return self._nx
 
     def get_state_name(self) -> List[str]:
-        nx = self.get_nx()
+        nx = self.nx
         name_tag = []
         if nx != 0:
             name_tag = ['xi' + str(i+1) for i in range(nx)]
@@ -50,7 +51,7 @@ class Pss():
         return (dx, u)
 
     def initialize(self) -> FloatArray:
-        x: FloatArray = np.zeros((self.get_nx(), 1))
+        x: FloatArray = np.zeros((self.nx, 1))
         return x
 
     def get_sys(self) -> SS:
@@ -90,4 +91,4 @@ class Pss():
             # pssが状態空間表現SSオブジェクトであると仮定する
             self.A, self.B, self.C, self.D = pss.A, pss.B, pss.C, pss.D  # type: ignore
 
-        self.nx = np.shape(self.A)[0]
+        self._nx = np.shape(self.A)[0]

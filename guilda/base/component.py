@@ -7,15 +7,28 @@ from guilda.base.types import StateEquationRecord
 
 
 class Component(ABC):
-    """_summary_
-
-    Args:
-        ABC (_type_): _description_
+    """The base class of a component.
     """
 
     def __init__(self):
         self.__v_eq: complex = 0
         self.__i_eq: complex = 0
+
+
+    @property
+    @AM
+    def nx(self) -> int:
+        """Returns the dimension of the component's state."""
+
+    @property
+    @AM
+    def nu(self) -> int:
+        """Returns the dimension of the component's input."""
+    
+    @property
+    @AM
+    def nl(self) -> int:
+        """Returns the count of the component's parameters."""
 
     @property
     def x_equilibrium(self) -> FloatArray:
@@ -28,6 +41,8 @@ class Component(ABC):
     @property
     def I_equilibrium(self) -> complex:
         return self.__i_eq
+    
+    
 
     def set_equilibrium(self, V: complex, I: complex) -> None:
         """_summary_
@@ -39,15 +54,10 @@ class Component(ABC):
         self.__v_eq = V
         self.__i_eq = I
 
-    @AM
-    def get_nx(self) -> int:
-        """Returns the dimension of the component's state.
-        """
 
-    @AM
-    def get_nu(self) -> int:
-        """Returns the dimension of the component's input.
-        """
+
+
+    # old api
 
     @AM
     def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
@@ -105,11 +115,21 @@ class Component(ABC):
 
 class ComponentEmpty(Component):
 
-    def get_nx(self) -> int:
+    @property
+    def nx(self) -> int:
         return 0
 
-    def get_nu(self) -> int:
+    @property
+    def nu(self) -> int:
         return 0
+    
+    @property
+    def nl(self) -> int:
+        return 0
+
+
+
+
 
     def get_dx_constraint(
         self,
@@ -132,19 +152,19 @@ class ComponentEmpty(Component):
         return self.get_dx_constraint(V, I, x, u, t)
 
     def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
-        A = np.array([]).reshape(-1, 1)
-        B = np.array([]).reshape(-1, 1)
+        A = np.zeros((0, 1))
+        B = np.zeros((0, 1))
         C = np.zeros([2, 0])
         D = np.zeros([2, 0])
         BV = np.zeros([0, 2])
         DV = np.zeros([2, 2])
-        R = np.array([]).reshape(-1, 1)
-        S = np.array([]).reshape(-1, 1)
+        R = np.zeros((0, 1))
+        S = np.zeros((0, 1))
         DI = -np.identity(2)
         BI = np.zeros([0, 2])
 
         return StateEquationRecord(
-            n_x=self.get_nx(), n_u=self.get_nu(),
+            nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
             BV=BV, DV=DV, BI=BI, DI=DI,
             R=R, S=S

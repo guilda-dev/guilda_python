@@ -18,11 +18,13 @@ class Bus(ABC):
         self.shunt: complex = 0
         self.set_shunt(shunt)
 
-    def get_nx(self):
-        return len(self.component.x_equilibrium)
+    @property
+    def nx(self):
+        return self.component.nx
 
-    def get_nu(self):
-        return self.component.get_nu()
+    @property
+    def nu(self):
+        return self.component.nu
 
     def set_equilibrium(self, Veq: complex, Ieq: complex):
         self.V_equilibrium = Veq

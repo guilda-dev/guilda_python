@@ -9,6 +9,7 @@ packaging
 pandas
 Pillow
 pyparsing
+pyproject.toml
 python-dateutil
 pytz
 scipy

@@ -18,8 +18,9 @@ class Controller(ABC):
         self.index_input: List[int] = index_input  
         self.index_observe: List[int] = index_observe 
 
+    @property
     @AM
-    def get_nx(self) -> int:
+    def nx(self) -> int:
         """_summary_
 
         Returns:
@@ -63,7 +64,7 @@ class Controller(ABC):
 
 
     def get_x0(self) -> FloatArray:
-        out = np.zeros((self.get_nx(), 1))  # controller.m:28
+        out = np.zeros((self.nx, 1))  # controller.m:28
         return out
 
     @property

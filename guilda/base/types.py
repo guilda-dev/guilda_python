@@ -1,5 +1,5 @@
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Literal
 from numpy.typing import NDArray
 
@@ -11,30 +11,28 @@ MatUU = Annotated[FloatArray, Literal['n_u', 'n_u']]
 MatXU = Annotated[FloatArray, Literal['n_x', 'n_u']]
 MatUX = Annotated[FloatArray, Literal['n_u', 'n_x']]
 
-READONLY_ZERO_ARRAY = np.zeros((0, 0))
-READONLY_ZERO_ARRAY.setflags(write=False)
-
+ 
 @dataclass
 class StateEquationRecord:
     """_summary_
     """    
     
-    n_x: int = 0
-    n_u: int = 0
+    nx: int = 0
+    nu: int = 0
     
-    A: MatXX = READONLY_ZERO_ARRAY
-    B: MatXU = READONLY_ZERO_ARRAY
-    C: MatUX = READONLY_ZERO_ARRAY
-    D: MatUU = READONLY_ZERO_ARRAY
+    A: MatXX = field(default_factory=lambda: np.zeros((0, 0)))
+    B: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
+    C: MatUX = field(default_factory=lambda: np.zeros((0, 0)))
+    D: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
     
-    BV: MatXU = READONLY_ZERO_ARRAY
-    DV: MatUU = READONLY_ZERO_ARRAY
+    BV: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
+    DV: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
     
-    BI: MatXU = READONLY_ZERO_ARRAY
-    DI: MatUU = READONLY_ZERO_ARRAY
+    BI: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
+    DI: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
     
-    R: NDArray = READONLY_ZERO_ARRAY
-    S: NDArray = READONLY_ZERO_ARRAY
+    R: NDArray = field(default_factory=lambda: np.zeros((0, 0)))
+    S: NDArray = field(default_factory=lambda: np.zeros((0, 0)))
     
     def as_tuple(self):
         """_summary_
@@ -53,6 +51,6 @@ class StateEquationRecord:
             A = self.A, B = self.B, C = self.C, D = self.D, 
             BV = self.BV, DV = self.DV, BI = self.BI, DI = self.DI, 
             R = self.R, S = self.S, 
-            n_x = self.n_x, 
-            n_u = self.n_u,
+            nx = self.nx, 
+            nu = self.nu,
         )

@@ -25,7 +25,8 @@ class Governor(object):
         x: FloatArray = np.zeros((0, 1))
         return x
 
-    def get_nx(self) -> int:
+    @property
+    def nx(self) -> int:
         return 0
 
     def get_P(self, u: FloatArray):
@@ -37,7 +38,7 @@ class Governor(object):
         return self.sys
     
     def get_state_name(self):
-        nx = self.get_nx()
+        nx = self.nx
         name_tag = []
         if nx != 0:
             name_tag = ['state_governor' + str(i+1) for i in range(nx)]

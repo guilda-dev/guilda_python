@@ -22,7 +22,8 @@ class ControllerBroadcastPIAGC(Controller):
         self.K_broadcast: FloatArray = np.ones((len(self.index_input), 1))
         self.net = net  # controller_broadcast_PI_AGC.m:19
 
-    def get_nx(self):
+    @property
+    def nx(self):
         return 1
 
     def get_dx_u(self, t, x, X, V, I, u_global):
@@ -43,9 +44,9 @@ class ControllerBroadcastPIAGC(Controller):
 
     def get_linear_matrix(self):
         A = 0  # controller_broadcast_PI_AGC.m:42
-        nx = tools.vcellfun(lambda b: b.component.get_nx(), self.net.a_bus(
+        nx = tools.vcellfun(lambda b: b.component.nx, self.net.a_bus(
             self.index_observe))  # controller_broadcast_PI_AGC.m:43
-        nu = tools.vcellfun(lambda b: b.component.get_nu(), self.net.a_bus(
+        nu = tools.vcellfun(lambda b: b.component.nu, self.net.a_bus(
             self.index_observe))  # controller_broadcast_PI_AGC.m:44
         # controller_broadcast_PI_AGC.m:46
         BX = tools.harrayfun(lambda n: concat(

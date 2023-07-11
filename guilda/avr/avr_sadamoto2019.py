@@ -38,7 +38,8 @@ class AvrSadamoto2019(Avr):
     def get_state_name(self):
         return ['Vfield']
 
-    def get_nx(self):
+    @property
+    def nx(self):
         return 1
 
     def initialize(self, Vfd, Vabs):
