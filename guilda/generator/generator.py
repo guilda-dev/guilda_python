@@ -14,10 +14,10 @@ from guilda.generator.governor import Governor
 from guilda.generator.types import GeneratorParameters
 
 class Generator(Component):
-    """
-モデル  ：同期発電機
+    '''
+モデル：同期発電機
 Actually, it is the classical model
-    """
+    '''
     
     
     @property

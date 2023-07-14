@@ -8,18 +8,18 @@ from guilda.utils.data import complex_to_col_vec
 from guilda.utils.typing import FloatArray
 
 class LoadVoltage(Load):
-    """モデル ：定電圧負荷モデル
+    '''モデル：定電圧負荷モデル
       ・状態：なし
       ・入力：２ポート「電圧フェーザの実部の倍率,電圧フェーザの虚部の倍率」
               *入力αのとき値は設定値の(1+α)倍となる．
 親クラス：componentクラス
 実行方法：obj = load_voltage()
-引数 ：なし
-出力 ：componentクラスのインスタンス
+引数：なし
+出力：componentクラスのインスタンス
 
     Args:
         Component (_type_): _description_
-    """
+    '''
 
     def get_dx_constraint(
         self,

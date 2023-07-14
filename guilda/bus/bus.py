@@ -48,11 +48,11 @@ class Bus(ABC):
         
     @AM
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float) -> FloatArray:
-        """_summary_
+        '''_summary_
 
         Args:
             Vr (_type_): _description_
             Vi (_type_): _description_
             P (_type_): _description_
             Q (_type_): _description_
-        """        
+        '''        

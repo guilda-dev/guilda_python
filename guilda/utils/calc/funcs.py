@@ -4,14 +4,14 @@ from guilda.utils.typing import ComplexArray, FloatArray
 
 
 def complex_mat_to_float(m: ComplexArray) -> FloatArray:
-    """_summary_
+    '''_summary_
 
     Args:
         m (ComplexArray): _description_
 
     Returns:
         FloatArray: _description_
-    """  
+    '''  
     n, p = m.shape
     r: FloatArray = np.zeros((2*n, 2*p))
     r[ ::2, ::2] =  m.real

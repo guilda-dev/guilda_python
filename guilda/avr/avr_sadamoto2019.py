@@ -19,11 +19,11 @@ class AvrSadamoto2019Parameters:
 
 class AvrSadamoto2019(Avr):
     '''
-    モデル  ：定本先生が2019年の論文で紹介されたモデル
+    モデル：定本先生が2019年の論文で紹介されたモデル
     親クラス：avrクラス
     実行方法：AvrSadamoto2019(avr_pd)
-    引数 ：・avr_pd：pandas.Series型の変数。「'Te','Ka'」を列名として定義
-    出力 ：avrクラスの変数
+    引数：・avr_pd：pandas.Series型の変数。「'Te','Ka'」を列名として定義
+    出力：avrクラスの変数
     '''
     
     def __init__(self, avr_pd: AvrSadamoto2019Parameters):

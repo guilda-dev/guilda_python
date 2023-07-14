@@ -10,10 +10,10 @@ class Branch(ABC):
         
     @AM
     def get_admittance_matrix(self) -> ComplexArray:
-        """_summary_
+        '''_summary_
 
         Returns:
             FloatArray: _description_
-        """        
+        '''        
 
 

@@ -9,15 +9,15 @@ from guilda.utils.typing import FloatArray
 
 
 class LoadImpedance(Load):
-    """モデル ：定インピーダンス付加モデル
+    '''モデル：定インピーダンス付加モデル
           ・状態：なし
           ・入力：２ポート「インピーダンス値の実部の倍率,インピーダンス値の虚部の倍率」
                   *入力αのときインピーダンスの値は設定値の(1+α)倍となる．
     親クラス：componentクラス
     実行方法：obj = load_impedance()
-     引数 ：なし
-     出力 ：componentクラスのインスタンス
-    """    
+     引数：なし
+     出力：componentクラスのインスタンス
+    '''    
     
     
     

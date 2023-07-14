@@ -7,8 +7,8 @@ from guilda.base.types import StateEquationRecord
 
 
 class Component(ABC):
-    """The base class of a component.
-    """
+    '''The base class of a component.
+    '''
 
     def __init__(self):
         self.__v_eq: complex = 0
@@ -18,17 +18,17 @@ class Component(ABC):
     @property
     @AM
     def nx(self) -> int:
-        """Returns the dimension of the component's state."""
+        '''Returns the dimension of the component's state.'''
 
     @property
     @AM
     def nu(self) -> int:
-        """Returns the dimension of the component's input."""
+        '''Returns the dimension of the component's input.'''
     
     @property
     @AM
     def nl(self) -> int:
-        """Returns the count of the component's parameters."""
+        '''Returns the count of the component's parameters.'''
 
     @property
     def x_equilibrium(self) -> FloatArray:
@@ -45,12 +45,12 @@ class Component(ABC):
     
 
     def set_equilibrium(self, V: complex, I: complex) -> None:
-        """_summary_
+        '''_summary_
 
         Args:
             V (complex): voltage at equilibrium
             I (complex): current at equilibrium
-        """        
+        '''        
         self.__v_eq = V
         self.__i_eq = I
 
@@ -61,12 +61,12 @@ class Component(ABC):
 
     @AM
     def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
-        """_summary_
+        '''_summary_
 
         Args:
             v: voltage at equilibrium.
             x: state at equilibrium.
-        """
+        '''
 
     @AM
     def get_dx_constraint(
@@ -76,7 +76,7 @@ class Component(ABC):
         x: Optional[FloatArray] = None,
         u: Optional[FloatArray] = None,
         t: float = 0) -> Tuple[FloatArray, FloatArray]:
-        """_summary_
+        '''_summary_
 
         Args:
             V (complex, optional): _description_. Defaults to 0.
@@ -87,7 +87,7 @@ class Component(ABC):
 
         Returns:
             _type_: _description_
-        """
+        '''
     @AM
     def get_dx_constraint_linear(
         self,
@@ -96,7 +96,7 @@ class Component(ABC):
         x: Optional[FloatArray] = None,
         u: Optional[FloatArray] = None,
         t: float = 0) -> Tuple[FloatArray, FloatArray]:
-        """_summary_
+        '''_summary_
 
         Args:
             V (complex, optional): _description_. Defaults to 0.
@@ -107,7 +107,7 @@ class Component(ABC):
 
         Returns:
             _type_: _description_
-        """
+        '''
         
     def get_dx_con_func(self, linear: bool):
         return self.get_dx_constraint_linear if linear else self.get_dx_constraint

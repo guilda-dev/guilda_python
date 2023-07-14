@@ -13,24 +13,24 @@ from guilda.generator.generator import Generator
 
 
 class Generator2Axis(Generator):
-    """
-モデル  ：同期発電機の2軸モデル
+    '''
+モデル：同期発電機の2軸モデル
         ・状態：4つ「回転子偏角"δ",周波数偏差"Δω",内部電圧"E"」
               *AVRやPSSが付加されるとそれらの状態も追加される
         ・入力：２ポート「界磁入力"Vfield", 機械入力"Pmech"」
               *定常値からの追加分を指定
 親クラス：componentクラス
 実行方法：obj = generator_1axis(omega, parameter)
- 引数 ：・omega     : float値．系統周波数(50or60*2pi)
+    引数：・omega: float値．系統周波数(50or60*2pi)
      ・parameter : pandas.Series型．「'Xd', 'Xd_prime','Xq','T','M','D'」を列名として定義
- 出力 ：componentクラスのインスタンス
+    出力：componentクラスのインスタンス
 
     Args:
         Component (_type_): _description_
-    """
+    '''
 
     def get_self_x_name(self) -> List[str]:
-        return super().get_self_x_name() + ['Ed']
+        return super().get_self_x_name() + ['Eq', 'Ed']
 
     @property
     def nx_gen(self):

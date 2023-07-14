@@ -8,18 +8,18 @@ from guilda.utils.data import complex_to_col_vec
 from guilda.utils.typing import FloatArray
 
 class LoadPower(Load):
-    """モデル ：定電力負荷モデル
+    '''モデル：定電力負荷モデル
       ・状態：なし
       ・入力：２ポート「有効電力の倍率,無効電力の倍率」
               *入力αのとき電力の値は設定値の(1+α)倍となる．
 親クラス：componentクラス
 実行方法：obj = load_power()
- 引数 ：なし
- 出力 ：componentクラスのインスタンス
+    引数：なし
+    出力：componentクラスのインスタンス
 
     Args:
         Component (_type_): _description_
-    """
+    '''
     def __init__(self):
         super().__init__()
         self.P_st: float = 0

@@ -6,9 +6,9 @@ CT2 = Optional[Callable[[Any], None]]
 
 
 class ClassProperty(Generic[T]):
-    """
+    '''
     ClassProperty is a descriptor that can be used as a decorator to define class-level properties.
-    """
+    '''
 
     def __init__(
         self,
@@ -17,7 +17,7 @@ class ClassProperty(Generic[T]):
         default: Optional[T] = None,
         default_factory: Optional[Callable[[], T]] = None
     ):
-        """
+        '''
         Initialize a ClassProperty object.
 
         Args:
@@ -25,7 +25,7 @@ class ClassProperty(Generic[T]):
             optional: Indicates whether the property is optional or required.
             default: The default value of the property if not explicitly set.
             default_factory: A callable that returns the default value of the property if not explicitly set.
-        """
+        '''
         self.default = default
         self.default_factory = default_factory
         self.type_ = type_
@@ -37,24 +37,24 @@ class ClassProperty(Generic[T]):
         self.cb_del: CT2 = None
 
     def __set_name__(self, owner, name):
-        """
+        '''
         Set the name of the property when it is assigned to a class.
 
         Args:
             owner: The owner class of the property.
             name: The name of the property.
-        """
+        '''
         self.name = f'_{owner.__name__}_{name}'
 
     def get_default_value(self) -> Optional[T]:
-        """
+        '''
         Get the default value of the property.
 
         Returns:
             The default value of the property.
         Raises:
             AttributeError: If the default value is not of the expected type.
-        """
+        '''
         default_value: Optional[T] = (
             self.default if self.default is not None else
             self.default_factory() if self.default_factory is not None else
@@ -73,7 +73,7 @@ class ClassProperty(Generic[T]):
         return default_value
 
     def __get__(self, instance, owner) -> Optional[T]:
-        """
+        '''
         Get the value of the property.
 
         Args:
@@ -82,7 +82,7 @@ class ClassProperty(Generic[T]):
 
         Returns:
             The value of the property.
-        """
+        '''
         ret: Optional[T] = None
         if not hasattr(instance, self.name):
             ret = self.get_default_value()
@@ -94,7 +94,7 @@ class ClassProperty(Generic[T]):
         return ret
 
     def __set__(self, instance, value: Optional[T]):
-        """
+        '''
         Set the value of the property.
 
         Args:
@@ -103,7 +103,7 @@ class ClassProperty(Generic[T]):
 
         Raises:
             TypeError: If the value is not of the expected type.
-        """
+        '''
         if self.type_ is not None and (
                 not (self.optional and value is None) and
                 not isinstance(value, self.type_)
@@ -114,7 +114,7 @@ class ClassProperty(Generic[T]):
             self.cb_set(instance, value)
 
     def __delete__(self, instance):
-        """
+        '''
         Delete the value of the property.
 
         Args:
@@ -122,7 +122,7 @@ class ClassProperty(Generic[T]):
 
         Raises:
             TypeError: If the property is non-optional and unable to delete.
-        """
+        '''
         if not self.optional:
             raise TypeError(f"Property `{self.name}` is non-optional and unable to delete.")
         if self.cb_del is not None:
@@ -130,7 +130,7 @@ class ClassProperty(Generic[T]):
         delattr(instance, self.name)
 
     def get_callback(self, func: CT) -> CT:
-        """
+        '''
         Set a callback function to be called when getting the property value.
 
         Args:
@@ -138,12 +138,12 @@ class ClassProperty(Generic[T]):
 
         Returns:
             The callback function.
-        """
+        '''
         self.cb_get = func
         return func
 
     def set_callback(self, func: CT) -> CT:
-        """
+        '''
         Set a callback function to be called when setting the property value.
 
         Args:
@@ -151,12 +151,12 @@ class ClassProperty(Generic[T]):
 
         Returns:
             The callback function.
-        """
+        '''
         self.cb_set = func
         return func
 
     def del_callback(self, func: CT2) -> CT2:
-        """
+        '''
         Set a callback function to be called when deleting the property.
 
         Args:
@@ -164,7 +164,7 @@ class ClassProperty(Generic[T]):
 
         Returns:
             The callback function.
-        """
+        '''
         self.cb_del = func
         return func
 

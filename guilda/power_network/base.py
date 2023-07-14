@@ -23,7 +23,7 @@ def f_tmp(t, fs):
 
 
 def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
-    """_summary_
+    '''_summary_
 
     Args:
         t (List[float]): _description_
@@ -31,7 +31,7 @@ def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
 
     Returns:
         _type_: _description_
-    """
+    '''
     # if not u.any() or not u[1].any():
     #     return lambda _: np.zeros((0, 0))
     
@@ -150,7 +150,7 @@ class _PowerNetwork(object):
         self.set_equilibrium(V, I)
 
     def get_sys(self):
-        #A, B, C, D, BV, DV, BI, DI, R, S
+        # A, B, C, D, BV, DV, BI, DI, R, S
         mats = [[] for _ in range(10)]
         for b in self.a_bus:
             mat = b.component.get_linear_matrix().as_tuple()

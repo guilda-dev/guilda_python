@@ -12,21 +12,21 @@ from guilda.utils.typing import FloatArray
 from guilda.generator.generator import Generator
 
 class Generator1Axis(Generator):
-    """
-モデル  ：同期発電機の1軸モデル
+    '''
+モデル：同期発電機の1軸モデル
         ・状態：３つ「回転子偏角"δ",周波数偏差"Δω",内部電圧"E"」
               *AVRやPSSが付加されるとそれらの状態も追加される
         ・入力：２ポート「界磁入力"Vfield", 機械入力"Pmech"」
               *定常値からの追加分を指定
 親クラス：componentクラス
 実行方法：obj = generator_1axis(omega, parameter)
- 引数 ：・omega     : float値．系統周波数(50or60*2pi)
+    引数：・omega: float値．系統周波数(50or60*2pi)
      ・parameter : pandas.Series型．「'Xd', 'Xd_prime','Xq','T','M','D'」を列名として定義
- 出力 ：componentクラスのインスタンス
+    出力：componentクラスのインスタンス
 
     Args:
         Component (_type_): _description_
-    """
+    '''
     
     def get_self_x_name(self) -> List[str]:
         return super().get_self_x_name() + ['Eq']
@@ -130,7 +130,7 @@ class Generator1Axis(Generator):
         SS.set_inputs(sys_swing, swing_inputs)
         SS.set_outputs(sys_swing, swing_outputs)
 
-        #状態の平衡点を取得
+        # 状態の平衡点を取得
         delta = x[0, 0]
         E = x[2, 0]
 
@@ -201,7 +201,7 @@ class Generator1Axis(Generator):
         sys_pss = self.pss.get_sys()
         sys_gov = self.governor.get_sys()
 
-        #interconnectを使うためにはIOSystemでなくてはいけない
+        # interconnectを使うためにはIOSystemでなくてはいけない
         io_swing = ct.ss2io(sys_swing, name='sys_swing')
         io_fb = ct.ss2io(sys_fb, name='sys_fb')
         io_V = ct.ss2io(sys_V, name='sys_V')

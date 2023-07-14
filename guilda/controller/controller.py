@@ -5,14 +5,14 @@ from abc import ABC, abstractmethod as AM
 from guilda.utils.typing import FloatArray
 
 class Controller(ABC):
-    """_summary_
+    '''_summary_
 
     Args:
         ABC (_type_): _description_
 
     Returns:
         _type_: _description_
-    """
+    '''
     
     def __init__(self, index_input: List[int], index_observe: List[int]):
         self.index_input: List[int] = index_input  
@@ -21,15 +21,15 @@ class Controller(ABC):
     @property
     @AM
     def nx(self) -> int:
-        """_summary_
+        '''_summary_
 
         Returns:
             int: _description_
-        """        
+        '''        
         
     @AM
     def get_dx_u(self, t, x, X, V, I, U_global) -> Tuple[FloatArray, FloatArray]:
-        """_summary_
+        '''_summary_
 
         Args:
             t (_type_): _description_
@@ -41,11 +41,11 @@ class Controller(ABC):
 
         Returns:
             Tuple[FloatArray, FloatArray]: _description_
-        """        
+        '''        
         
     @AM
     def get_dx_u_linear(self, t, x, X, V, I, U_global) -> Tuple[FloatArray, FloatArray]:
-        """_summary_
+        '''_summary_
 
         Args:
             t (_type_): _description_
@@ -57,7 +57,7 @@ class Controller(ABC):
 
         Returns:
             Tuple[FloatArray, FloatArray]: _description_
-        """        
+        '''        
 
     def get_dx_u_func(self, linear: bool):
         return self.get_dx_u_linear if linear else self.get_dx_u

@@ -14,8 +14,8 @@ MatUX = Annotated[FloatArray, Literal['n_u', 'n_x']]
  
 @dataclass
 class StateEquationRecord:
-    """_summary_
-    """    
+    '''_summary_
+    '''    
     
     nx: int = 0
     nu: int = 0
@@ -35,11 +35,11 @@ class StateEquationRecord:
     S: NDArray = field(default_factory=lambda: np.zeros((0, 0)))
     
     def as_tuple(self):
-        """_summary_
+        '''_summary_
 
         Returns:
             _type_: _description_
-        """        
+        '''        
         return (
             self.A, self.B, self.C, self.D, 
             self.BV, self.DV, self.BI, self.DI, 
