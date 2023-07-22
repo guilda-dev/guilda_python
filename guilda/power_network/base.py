@@ -132,6 +132,7 @@ class _PowerNetwork(object):
         Y = self.get_admittance_matrix()
         x0 = np.array([1, 0] * n).reshape((-1, 1))
 
+        # this one definitely requires numpy backend
         ans = root(lambda x: func_eq(Y, x), x0, method="hybr")
 
         Vrans = np.array([[ans.x[i]] for i in range(0, len(ans.x), 2)])

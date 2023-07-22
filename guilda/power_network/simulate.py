@@ -133,6 +133,8 @@ def solve_odes(
     linear: bool, 
     options: SimulationOptions):
 
+    # transform input data
+
     bus = self.a_bus
     controllers_global = self.a_controller_global
     controllers = self.a_controller_local
@@ -171,7 +173,7 @@ def solve_odes(
         t_simulated = get_t_simulated(t_cand, uf, fault_f)
 
     # :45
-    # restore simulation result
+    # store simulation result
 
     sols: List[Tuple[FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
     metas: List[SimulationSegment] = []
@@ -196,6 +198,7 @@ def solve_odes(
     ti = t_simulated[0]
     tf = t_simulated[-1]
 
+    # in each time span
     for i in range(len(t_simulated) - 1):
 
         tstart, tend = t_simulated[i: i + 2]
@@ -219,6 +222,9 @@ def solve_odes(
         idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in f_] + [[]])
 
 
+        # TODO check the following:
+        # x_k: the states of all buses
+        # V_k, I_k: the states of needed buses only
         x = np.vstack([x_k, V_k[idx_simulated_bus], I_k[idx_fault_bus]])
 
 
@@ -269,6 +275,7 @@ def solve_odes(
             # TODO add reporter?
 
 
+        # interpolate input
         if options.method.lower() == 'zoh':
             u_ = uf((tstart + tend) / 2)
             func = lambda t, x, dx, res: func_(t, x, lambda _: u_, dx, res)

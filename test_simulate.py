@@ -11,7 +11,7 @@ np.set_printoptions(
     suppress=True,
 )
 
-net2 = sample.IEEE68bus()
+# net2 = sample.IEEE68bus()
 
 net = sample.simple_3_bus_nishino()
 net.initialize()

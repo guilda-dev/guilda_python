@@ -27,10 +27,10 @@ class AvrSadamoto2019(Avr):
     '''
     
     def __init__(self, avr_pd: AvrSadamoto2019Parameters):
-        super().__init__()
-
         self.Te: float = avr_pd.Te
         self.Ka: float = avr_pd.Ka
+        super().__init__()
+
         
 
     def get_state_name(self):
