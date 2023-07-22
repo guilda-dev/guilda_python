@@ -2,18 +2,8 @@ from typing import Union, Literal, Any, Iterable, Optional, Tuple
 from numpy.typing import ArrayLike
 from abc import ABC, abstractmethod as AM
 
-KernelType = Union[
-    Literal['numpy'],
-    Literal['sympy'],
-    Literal['torch'],
-    Literal['cupy']
-]
-
-BitLenType = Union[
-    Literal[16],
-    Literal[32],
-    Literal[64]
-]
+KernelType = Literal['numpy', 'sympy', 'torch', 'cupy']
+BitLenType = Literal[16, 32, 64, 128]
 
 ShapeLike = Tuple[int, ...]
 ShapeLike1 = Tuple[int]
