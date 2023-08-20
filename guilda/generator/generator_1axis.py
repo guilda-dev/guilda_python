@@ -7,7 +7,7 @@ from control import StateSpace as SS
 
 from guilda.base import StateEquationRecord
 from guilda.utils import complex_to_col_vec
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 from guilda.generator.generator import Generator
 
@@ -39,9 +39,9 @@ class Generator1Axis(Generator):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         
         assert x is not None
         assert u is not None
@@ -87,7 +87,7 @@ class Generator1Axis(Generator):
 
 
 
-    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
+    def get_linear_matrix(self, V: complex = 0, x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
         if (x is None or not any(x)) and V is None:
             return self.system_matrix.copy()
 
@@ -121,7 +121,7 @@ class Generator1Axis(Generator):
         # y3 = E
         C_swing = np.identity(3)
 
-        D_swing = np.zeros([3, 4])
+        D_swing = np.zeros((3, 4))
 
         sys_swing = SS(A_swing, B_swing, C_swing, D_swing)
 
@@ -168,7 +168,7 @@ class Generator1Axis(Generator):
             [np.array([[dIi_dd]]), np.array([[-cos(delta)/Xdp]]), dIi_dV], axis=1)
         KI = np.concatenate([KI_vec1, KI_vec2], axis=0)
 
-        vec3 = np.concatenate([np.zeros([2, 2]), np.identity(2)], axis=1)
+        vec3 = np.concatenate([np.zeros((2, 2)), np.identity(2)], axis=1)
         dP = np.array([V.real, V.imag]).reshape(1, -1) @ KI + Ieq_vec.T @ vec3
 
         # sys_fbの直達行列(4×4)
@@ -252,10 +252,10 @@ class Generator1Axis(Generator):
         assert idx_u_viin is not None
         assert idx_u_vrin is not None
         
-        _A: FloatArray = ss_closed.A # type: ignore
-        _B: FloatArray = ss_closed.B # type: ignore
-        _C: FloatArray = ss_closed.C # type: ignore
-        _D: FloatArray = ss_closed.D # type: ignore
+        _A: ArrayProtocol = ss_closed.A # type: ignore
+        _B: ArrayProtocol = ss_closed.B # type: ignore
+        _C: ArrayProtocol = ss_closed.C # type: ignore
+        _D: ArrayProtocol = ss_closed.D # type: ignore
         
         A = _A
         B = _B[:, idx_u_avr: idx_u_gov + 1]

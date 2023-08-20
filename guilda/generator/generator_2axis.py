@@ -7,7 +7,7 @@ from control import StateSpace as SS
 
 from guilda.base import StateEquationRecord
 from guilda.utils import complex_to_col_vec
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 from guilda.generator.generator import Generator
 
@@ -40,9 +40,9 @@ class Generator2Axis(Generator):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-            t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+            t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
 
         assert x is not None
         assert u is not None

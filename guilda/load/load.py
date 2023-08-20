@@ -1,11 +1,11 @@
 from typing import Optional, Tuple
 
-import numpy as np
+import guilda.backend as G
 
 from guilda.base import Component
 
 from guilda.utils.data import complex_to_col_vec, complex_to_matrix
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 class Load(Component):
     '''負荷モデル
@@ -15,12 +15,12 @@ class Load(Component):
     '''
     
     @property
-    def x_equilibrium(self) -> FloatArray:
-        return np.zeros((0, 1))
+    def x_equilibrium(self) -> ArrayProtocol:
+        return G.zeros((0, 1))
       
       
     @property
-    def Y_mat(self) -> FloatArray:
+    def Y_mat(self) -> ArrayProtocol:
         return complex_to_matrix(self.Y)
     
     
@@ -30,8 +30,8 @@ class Load(Component):
     
     def __init__(self):
         super().__init__()
-        self.S: FloatArray = np.zeros((1, 0))
-        self.R: FloatArray = np.zeros((0, 0))
+        self.S: ArrayProtocol = G.zeros((1, 0))
+        self.R: ArrayProtocol = G.zeros((0, 0))
 
         self.Y: complex = 0
         
@@ -40,15 +40,15 @@ class Load(Component):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert u is not None
         E = self.get_linear_matrix(V, x)
-        dx = np.zeros([0, 1])
-        diff_I: FloatArray = complex_to_col_vec(I) - complex_to_col_vec(self.I_equilibrium)
-        diff_V: FloatArray = complex_to_col_vec(V) - complex_to_col_vec(self.V_equilibrium)
-        constraint: FloatArray = E.D @ u + E.DI @ diff_I + E.DV @ diff_V
+        dx = G.zeros((0, 1))
+        diff_I: ArrayProtocol = complex_to_col_vec(I) - complex_to_col_vec(self.I_equilibrium)
+        diff_V: ArrayProtocol = complex_to_col_vec(V) - complex_to_col_vec(self.V_equilibrium)
+        constraint: ArrayProtocol = E.D @ u + E.DI @ diff_I + E.DV @ diff_V
         return dx, constraint
       
     @property

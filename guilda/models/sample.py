@@ -1,4 +1,4 @@
-import numpy as np
+import guilda.backend as G
 
 from guilda.load import LoadCurrent, LoadImpedance
 from guilda.power_network import PowerNetwork
@@ -44,7 +44,7 @@ def simple_3_bus_nishino():
 
     # definition of generators
     
-    omega0 = np.pi * 60 * 2
+    omega0 = G.pi * 60 * 2
     
     component1 = Generator1Axis(omega0, GeneratorParameters(
         Xd = 1.569, Xd_prime = 0.963, Xq = 0.963, Tdo = 5.14, M = 100, D = 10,

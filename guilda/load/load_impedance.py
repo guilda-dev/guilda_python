@@ -5,7 +5,7 @@ import numpy as np
 from guilda.base import StateEquationRecord
 from guilda.load.load import Load
 from guilda.utils.data import complex_to_col_vec, complex_to_matrix
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 
 class LoadImpedance(Load):
@@ -30,33 +30,33 @@ class LoadImpedance(Load):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert u is not None
-        dx = np.zeros([0, 1])
+        dx = np.zeros((0, 1))
         Y_vec = complex_to_col_vec(self.Y) * (1 + u[:2, :1])
         Y = Y_vec[0, 0] + 1j * Y_vec[1, 0]
         I_ = Y * V
         constraint = complex_to_col_vec(I - I_)
         return dx, constraint
 
-    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
+    def get_linear_matrix(self, V: complex = 0, x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
         if x is None:
             V = self.V_equilibrium
 
-        A = np.zeros([0, 0])
-        B = np.zeros([0, 2])
-        C = np.zeros([2, 0])
+        A = np.zeros((0, 0))
+        B = np.zeros((0, 2))
+        C = np.zeros((2, 0))
         D1 = complex_to_matrix(self.Y.real) @ complex_to_col_vec(V)
         D2 = complex_to_matrix(
             1j*(self.Y.imag)) @ complex_to_col_vec(V)
         D = np.hstack([D1, D2])
-        BV = np.zeros([0, 2])
+        BV = np.zeros((0, 2))
         DV = self.Y_mat
         R = self.R
         S = self.S
-        BI = np.zeros([0, 2])
+        BI = np.zeros((0, 2))
         DI = -np.identity(2)
         
         return StateEquationRecord(

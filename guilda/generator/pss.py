@@ -4,7 +4,7 @@ from control import StateSpace as SS
 from typing import Union, Tuple, List
 
 from guilda.generator.types import PssParameters
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 
 class Pss():
@@ -17,10 +17,10 @@ class Pss():
     '''
     def __init__(self, pss_in: Union[PssParameters, SS, None] = None):
 
-        self.A: FloatArray = np.zeros((0, 0))
-        self.B: FloatArray = np.zeros((0, 1))
-        self.C: FloatArray = np.zeros((1, 0))
-        self.D: FloatArray = np.zeros([1, 1])
+        self.A: ArrayProtocol = np.zeros((0, 0))
+        self.B: ArrayProtocol = np.zeros((0, 1))
+        self.C: ArrayProtocol = np.zeros((1, 0))
+        self.D: ArrayProtocol = np.zeros((1, 1))
         self._nx: int = 0
 
         if isinstance(pss_in, PssParameters) or isinstance(pss_in, SS):
@@ -45,13 +45,13 @@ class Pss():
             name_tag = ['xi' + str(i+1) for i in range(nx)]
         return name_tag
 
-    def get_u(self, x_pss: FloatArray, omega: float) -> Tuple[FloatArray, FloatArray]:
+    def get_u(self, x_pss: ArrayProtocol, omega: float) -> Tuple[ArrayProtocol, ArrayProtocol]:
         dx = self.A @ x_pss + self.B * omega
         u = self.C @ x_pss + self.D * omega
         return dx, u
 
-    def initialize(self) -> FloatArray:
-        x: FloatArray = np.zeros((self.nx, 1))
+    def initialize(self) -> ArrayProtocol:
+        x: ArrayProtocol = np.zeros((self.nx, 1))
         return x
 
     def get_sys(self) -> SS:

@@ -1,6 +1,7 @@
-import numpy as np
 from numpy.linalg import norm
 from cmath import phase
+
+import guilda.backend as G
 
 from guilda.bus.bus import Bus
 
@@ -12,9 +13,9 @@ class BusSlack(Bus):
         self.Vangle: float = Vangle
 
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
-        Vabs = norm([Vr, Vi])
+        Vabs = float(norm([Vr, Vi]))
         Vangle = phase(complex(Vr, Vi))
-        return np.array([
+        return G.array([
             [Vabs-self.Vabs], 
             [Vangle-self.Vangle]
         ])

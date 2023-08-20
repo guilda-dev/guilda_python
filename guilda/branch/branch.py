@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod as AM
 
-from guilda.utils.typing import ComplexArray
+from guilda.backend import ArrayProtocol
 
 class Branch(ABC):
     
@@ -9,11 +9,11 @@ class Branch(ABC):
         self.to: int = to
         
     @AM
-    def get_admittance_matrix(self) -> ComplexArray:
+    def get_admittance_matrix(self) -> ArrayProtocol:
         '''_summary_
 
         Returns:
-            FloatArray: _description_
+            ArrayProtocol: _description_
         '''        
 
 

@@ -3,7 +3,7 @@ from typing import Optional
 from abc import ABC, abstractmethod as AM
 
 from guilda.base.component import Component, ComponentEmpty
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 # ComplexOrNumList = Union[complex, List[Union[int, float]]]
 
@@ -47,7 +47,7 @@ class Bus(ABC):
         self.shunt = shunt
         
     @AM
-    def get_constraint(self, Vr: float, Vi: float, P: float, Q: float) -> FloatArray:
+    def get_constraint(self, Vr: float, Vi: float, P: float, Q: float) -> ArrayProtocol:
         '''_summary_
 
         Args:

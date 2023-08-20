@@ -1,7 +1,6 @@
-import numpy as np
+import guilda.backend as G
 
 from guilda.bus.bus import Bus
-
 
 
 class BusPQ(Bus):
@@ -11,7 +10,7 @@ class BusPQ(Bus):
         self.Q: float = Q
 
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
-        return np.array([
+        return G.array([
             [P-self.P],
             [Q-self.Q]
         ])

@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from control import StateSpace as SS
-import numpy as np
-import pandas as pd
+
+import guilda.backend as G
 
 from guilda.avr.avr import Avr
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 
 @dataclass
@@ -43,22 +43,22 @@ class AvrSadamoto2019(Avr):
     def initialize(self, Vfd: complex, Vabs: float):
         self.Vfd_st = Vfd
         self.Vabs_st = Vabs
-        x = np.array([[Vfd]])
+        x = G.array([[Vfd]])
         return x
 
-    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
+    def get_Vfd(self, u: ArrayProtocol, x_avr: ArrayProtocol, Vabs: float, Efd: complex):
         Vfd: complex = x_avr[0,0]
         Vef: float = self.Ka*(Vabs - self.Vabs_st + u[0, 0])
         dVfd = (-Vfd + self.Vfd_st - Vef)/self.Te
-        return np.array([[dVfd]]), Vfd
+        return G.array([[dVfd]]), Vfd
 
-    def get_Vfd_linear(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
+    def get_Vfd_linear(self, u: ArrayProtocol, x_avr: ArrayProtocol, Vabs: float, Efd: complex):
         return self.get_Vfd(u, x_avr, Vabs, Efd)
 
     def get_linear_matrix(self):
-        A = np.array(-1/self.Te).reshape(1, 1)
-        B = -self.Ka/self.Te * np.array([[1, 0, 1]])
-        C = np.identity(1)
-        D = np.zeros([1, 3])
+        A = G.array(-1/self.Te).reshape(1, 1)
+        B = -self.Ka/self.Te * G.array([[1, 0, 1]])
+        C = G.identity(1)
+        D = G.zeros((1, 3))
         return A, B, C, D
 

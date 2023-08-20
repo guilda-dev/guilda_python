@@ -4,7 +4,7 @@ from typing import List, Tuple, Union, Literal, Any
 import numpy as np
 
 from guilda.power_network.base import _PowerNetwork
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 @dataclass
 class SimulationOptions:
@@ -12,12 +12,12 @@ class SimulationOptions:
     linear: bool = False
     fault: List[Tuple[Tuple[float, float], List[int]]] = field(default_factory = list)
     
-    x0_sys: List[FloatArray] = field(default_factory = list)
+    x0_sys: List[ArrayProtocol] = field(default_factory = list)
     V0: List[complex] = field(default_factory = list)
     I0: List[complex] = field(default_factory = list)
     
-    x0_con_local: List[FloatArray] = field(default_factory = list)
-    x0_con_global: List[FloatArray] = field(default_factory = list)
+    x0_con_local: List[ArrayProtocol] = field(default_factory = list)
+    x0_con_global: List[ArrayProtocol] = field(default_factory = list)
     
     method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
     solver_method: str = 'ida'
@@ -53,7 +53,7 @@ class SimulationSegment:
     simulated_bus: List[int] = field(default_factory=list)
     fault_bus: List[int] = field(default_factory=list)
     
-    impedance_matrix: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
+    impedance_matrix: ArrayProtocol = field(default_factory=lambda: np.zeros((0, 0)))
     
     solution: Any = None
     
@@ -68,13 +68,13 @@ class SimulationResult:
     
     segments: List[SimulationSegment] = field(default_factory=list)
     
-    t: FloatArray = field(default_factory=lambda: np.zeros((0,)))
+    t: ArrayProtocol = field(default_factory=lambda: np.zeros((0,)))
     nx_bus: List[int] = field(default_factory=list)
     nu_bus: List[int] = field(default_factory=list)
     
-    x: List[FloatArray] = field(default_factory=list)
-    V: List[FloatArray] = field(default_factory=list)
-    I: List[FloatArray] = field(default_factory=list)
+    x: List[ArrayProtocol] = field(default_factory=list)
+    V: List[ArrayProtocol] = field(default_factory=list)
+    I: List[ArrayProtocol] = field(default_factory=list)
     
     
         

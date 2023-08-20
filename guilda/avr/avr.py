@@ -1,7 +1,8 @@
 from control import StateSpace as SS
-import numpy as np
 
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
+
+import guilda.backend as G
 
 class Avr():
     
@@ -24,12 +25,12 @@ class Avr():
         self.Vfd_st = Vfd
         self.Vabs_st = Vabs
         # 状態がない
-        x = np.zeros((0, 1))
+        x = G.zeros((0, 1))
         return x
 
-    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
+    def get_Vfd(self, u: ArrayProtocol, x_avr: ArrayProtocol, Vabs: float, Efd: complex):
         Vfd = self.Vfd_st + u[0, 0]
-        dx = np.zeros((0, 1))
+        dx = G.zeros((0, 1))
         return dx, Vfd
 
     def get_sys(self):
@@ -37,10 +38,10 @@ class Avr():
     
     def get_linear_matrix(self):
         # ここではavrのダイナミクスを考慮しない
-        A = np.zeros((0, 0))
-        B = np.zeros((0, 3))
-        C = np.zeros((1, 0))
-        D = np.array([[0, 0, 1]])
+        A = G.zeros((0, 0))
+        B = G.zeros((0, 3))
+        C = G.zeros((1, 0))
+        D = G.array([[0, 0, 1]])
         return A, B, C, D
 
     def get_state_name(self):

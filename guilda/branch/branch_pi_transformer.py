@@ -1,8 +1,9 @@
-import numpy as np
 from numpy import exp
 
+import guilda.backend as G
+
 from guilda.branch.branch import Branch
-from guilda.utils.typing import ComplexArray
+from guilda.backend import ArrayProtocol
 
 class BranchPiTransformer(Branch):
     '''
@@ -29,12 +30,12 @@ restrictions: SetAccess = public
         self.tap: float = tap
         self.phase: float = phase
 
-    def get_admittance_matrix(self) -> ComplexArray:
+    def get_admittance_matrix(self) -> ArrayProtocol:
         x = self.x
         y = self.y
         t = self.tap
         p = self.phase
-        Y = np.array((
+        Y = G.array((
             [(complex(1/x, y)) / t**2         , - 1 / (x * t * exp(complex(0,-p)))],
             [-1 / (x * t * exp(complex(0, p))), complex(1/x, y)                   ]
         ))

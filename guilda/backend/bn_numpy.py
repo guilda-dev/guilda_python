@@ -1,7 +1,11 @@
+# type:ignore
+
 import numpy as np
+from numpy.typing import NDArray
 from typing import Iterable
 
-from guilda.backend.types import BitLenType, GuildaBackendProtocol, ArrayLike, ArrayProtocol, ShapeLike, ShapeLike1, ShapeLike2, NumberLike
+from guilda.backend.protocol import ArrayProtocol
+from guilda.backend.types import BitLenType, ArrayLike, KernelType, ShapeLike, ShapeLike1, ShapeLike2, NumberLike
 
 __dtype_selector = {
   16: np.float16,
@@ -24,61 +28,31 @@ class NumPyArray(ArrayProtocol):
     
 _f = lambda x: NumPyArray(x)
 
-class NumPyProtocol(GuildaBackendProtocol):
+def __rvec(object: ArrayLike, *args, **kwargs):
+    ret = np.array(object, *args, **kwargs)
+    return ret.reshape((1, ret.size))
+
+def __cvec(object: ArrayLike, *args, **kwargs):
+    ret = np.array(object, *args, **kwargs)
+    return ret.reshape((ret.size, 1))
+
+def init_numpy(bitlen: BitLenType, p: 'guilda.backend.protocol'):
+    dtype = __dtype_selector.get(bitlen, np.float64)
+    dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
+
+    p.array = np.array
+    p.zeros = np.zeros
+    p.ones = np.ones
+    p.identity = np.identity
+    p.diag = np.diag
+    p.hstack = np.hstack
+    p.vstack = np.vstack
+    p.dstack = np.dstack
+    p.concatenate = np.concatenate
+    p.inv = np.linalg.inv
+    p.arange = np.arange
     
-    def __init__(self, bitlen: BitLenType) -> None:
-        super().__init__(bitlen)
-        self.__dtype = __dtype_selector.get(bitlen, np.float64)
-        self.__dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
-        
-    
-    def array(self, object: ArrayLike):
-        return np.array(object, dtype=self.__dtype_c if np.iscomplexobj(object) else self.__dtype)
-    
-    
-    def zeros(self, shape: ShapeLike):
-        return np.zeros(shape, dtype=self.__dtype)
-    
-    
-    def ones(self, shape: ShapeLike):
-        return np.ones(shape, dtype=self.__dtype)
-    
-    
-    def identity(self, shape: int):
-        return np.identity(shape, dtype=self.__dtype)
-    
-    
-    def rvec(self, object: Iterable[NumberLike]):
-        pass
-    
-    
-    def cvec(self, object: Iterable[NumberLike]):
-        pass
+    p.rvec = __rvec
+    p.cvec = __cvec
     
     
-    def diag(self, object: Iterable[NumberLike]):
-        pass
-    
-    
-    def hstack(self, tup: Iterable[ArrayLike]):
-        pass
-    
-    
-    def vstack(self, tup: Iterable[ArrayLike]):
-        pass
-    
-    
-    def dstack(self, tup: Iterable[ArrayLike]):
-        pass
-    
-    
-    def concatenate(self, tup: Iterable[ArrayLike], axis: int = -1):
-        pass
-    
-    
-    def inv(self, object: ArrayLike):
-        return np.linalg.inv(object) # type: ignore
-    
-    
-    def arange(self, start: NumberLike, stop: NumberLike, step: NumberLike):
-        pass

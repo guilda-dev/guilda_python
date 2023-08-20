@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import TypeVar, List
 
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 
 def convert_to_complex(obj) -> complex:
@@ -56,9 +56,9 @@ def sep_list(lst: List[R], lens: List[int]) -> List[List[R]]:
         ret.append(cells)
     return ret
 
-def sep_col_vec(lst: FloatArray, lens: List[int]) -> List[FloatArray]:
+def sep_col_vec(lst: ArrayProtocol, lens: List[int]) -> List[ArrayProtocol]:
     idx = 0
-    ret: List[FloatArray] = []
+    ret: List[ArrayProtocol] = []
     for len_ in lens:
         cells = lst[idx: idx + len_]
         idx += len_
@@ -66,13 +66,13 @@ def sep_col_vec(lst: FloatArray, lens: List[int]) -> List[FloatArray]:
     return ret
 
 
-def complex_to_matrix(z: complex) -> FloatArray:
+def complex_to_matrix(z: complex) -> ArrayProtocol:
     r = z.real
     c = z.imag
     return np.array([[r, -c], [c, r]])
 
 
-def complex_to_col_vec(z: complex) -> FloatArray:
+def complex_to_col_vec(z: complex) -> ArrayProtocol:
     r = z.real
     c = z.imag
     return np.array([[r], [c]])

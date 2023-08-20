@@ -7,7 +7,7 @@ from guilda.base import Component, StateEquationRecord
 from guilda.avr import Avr
 from guilda.utils import as_dict
 from guilda.utils.data import complex_to_col_vec
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 from guilda.generator.pss import Pss
 from guilda.generator.governor import Governor
@@ -21,7 +21,7 @@ Actually, it is the classical model
     
     
     @property
-    def x_equilibrium(self) -> FloatArray:
+    def x_equilibrium(self) -> ArrayProtocol:
         return self._x_eq
     
 
@@ -30,9 +30,9 @@ Actually, it is the classical model
         
         self.parameter: GeneratorParameters = GeneratorParameters(**as_dict(parameter))
 
-        self._x_eq: FloatArray = np.zeros((0, 0))
+        self._x_eq: ArrayProtocol = np.zeros((0, 0))
         
-        self.alpha_st: FloatArray = np.zeros((0, 0))
+        self.alpha_st: ArrayProtocol = np.zeros((0, 0))
         self.avr = Avr()
         self.governor = Governor()
         self.pss = Pss()
@@ -75,7 +75,7 @@ Actually, it is the classical model
 
 
 
-    def set_linear_matrix(self, Veq: complex = 0, xeq: Optional[FloatArray] = None):
+    def set_linear_matrix(self, Veq: complex = 0, xeq: Optional[ArrayProtocol] = None):
         if self.omega0 == None:
             return
         
@@ -100,7 +100,7 @@ Actually, it is the classical model
     def nl(self):
         return 0
 
-    def get_components_dx(self, x: FloatArray, u: FloatArray, omega: float, Vabs: float, Efd: complex):
+    def get_components_dx(self, x: ArrayProtocol, u: ArrayProtocol, omega: float, Vabs: float, Efd: complex):
         
         nx = self.nx_gen
         
@@ -108,9 +108,9 @@ Actually, it is the classical model
         nx_pss = self.pss.nx
         nx_gov = self.governor.nx
 
-        x_avr: FloatArray = x[nx:nx+nx_avr]
-        x_pss: FloatArray = x[nx+nx_avr:nx+nx_avr+nx_pss]
-        x_gov: FloatArray = x[nx+nx_avr+nx_pss:nx+nx_avr+nx_pss+nx_gov]
+        x_avr: ArrayProtocol = x[nx:nx+nx_avr]
+        x_pss: ArrayProtocol = x[nx+nx_avr:nx+nx_avr+nx_pss]
+        x_gov: ArrayProtocol = x[nx+nx_avr+nx_pss:nx+nx_avr+nx_pss+nx_gov]
         
         dx_pss, v = self.pss.get_u(x_pss, omega)
         dx_avr, Vfd = self.avr.get_Vfd(
@@ -124,10 +124,10 @@ Actually, it is the classical model
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
         t: float = 0
-    ) -> Tuple[FloatArray, FloatArray]:
+    ) -> Tuple[ArrayProtocol, ArrayProtocol]:
         
         assert x is not None
         assert u is not None
@@ -171,9 +171,9 @@ Actually, it is the classical model
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert x is not None
         assert u is not None
         
@@ -195,7 +195,7 @@ Actually, it is the classical model
     def get_linear_matrix(
         self, 
         V: complex = 0, 
-        x: Optional[FloatArray] = None) -> StateEquationRecord:
+        x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
        
         raise RuntimeError("Not Implemented")
 

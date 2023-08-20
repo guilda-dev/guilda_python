@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod as AM
 from typing import Optional, Tuple
-import numpy as np
 
-from guilda.utils.typing import FloatArray
+import guilda.backend as G
+
+from guilda.backend import ArrayProtocol
 from guilda.base.types import StateEquationRecord
 
 
@@ -31,8 +32,8 @@ class Component(ABC):
         '''Returns the count of the component's parameters.'''
 
     @property
-    def x_equilibrium(self) -> FloatArray:
-        return np.zeros((0, 1))
+    def x_equilibrium(self) -> ArrayProtocol:
+        return G.zeros((0, 1))
     
     @property
     def V_equilibrium(self) -> complex:
@@ -60,7 +61,7 @@ class Component(ABC):
     # old api
 
     @AM
-    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
+    def get_linear_matrix(self, V: complex = 0, x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
         '''_summary_
 
         Args:
@@ -73,9 +74,9 @@ class Component(ABC):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         '''_summary_
 
         Args:
@@ -93,9 +94,9 @@ class Component(ABC):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         '''_summary_
 
         Args:
@@ -135,33 +136,33 @@ class ComponentEmpty(Component):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
-        dx: FloatArray = np.array([], dtype=np.float64).reshape(-1, 1)
-        constraint: FloatArray = np.zeros([2, 1], dtype=np.float64)
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
+        dx: ArrayProtocol = G.zeros((0, 1))
+        constraint: ArrayProtocol = G.zeros((0, 1))
         return (dx, constraint)
 
     def get_dx_constraint_linear(
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         return self.get_dx_constraint(V, I, x, u, t)
 
-    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
-        A = np.zeros((0, 1))
-        B = np.zeros((0, 1))
-        C = np.zeros([2, 0])
-        D = np.zeros([2, 0])
-        BV = np.zeros([0, 2])
-        DV = np.zeros([2, 2])
-        R = np.zeros((0, 1))
-        S = np.zeros((0, 1))
-        DI = -np.identity(2)
-        BI = np.zeros([0, 2])
+    def get_linear_matrix(self, V: complex = 0, x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
+        A = G.zeros((0, 1))
+        B = G.zeros((0, 1))
+        C = G.zeros((2, 0))
+        D = G.zeros((2, 0))
+        BV = G.zeros((0, 2))
+        DV = G.zeros((2, 2))
+        R = G.zeros((0, 1))
+        S = G.zeros((0, 1))
+        DI = -G.identity(2)
+        BI = G.zeros((0, 2))
 
         return StateEquationRecord(
             nx=self.nx, nu=self.nu,

@@ -2,7 +2,7 @@ import numpy as np
 
 from typing import List
 
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 from guilda.controller.controller import Controller
 
 
@@ -19,7 +19,7 @@ class ControllerBroadcastPIAGC(Controller):
         self.Ki = Ki  # controller_broadcast_PI_AGC.m:16
         self.Kp = Kp  # controller_broadcast_PI_AGC.m:17
         # controller_broadcast_PI_AGC.m:18
-        self.K_broadcast: FloatArray = np.ones((len(self.index_input), 1))
+        self.K_broadcast: ArrayProtocol = np.ones((len(self.index_input), 1))
         self.net = net  # controller_broadcast_PI_AGC.m:19
 
     @property

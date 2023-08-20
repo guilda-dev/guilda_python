@@ -1,15 +1,14 @@
-import numpy as np
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
-from numpy.typing import NDArray
 
-from guilda.utils.typing import FloatArray
+import guilda.backend as G
+from guilda.backend import ArrayProtocol
 
 
-MatXX = Annotated[FloatArray, Literal['n_x', 'n_x']]
-MatUU = Annotated[FloatArray, Literal['n_u', 'n_u']]
-MatXU = Annotated[FloatArray, Literal['n_x', 'n_u']]
-MatUX = Annotated[FloatArray, Literal['n_u', 'n_x']]
+MatXX = Annotated[ArrayProtocol, Literal['n_x', 'n_x']]
+MatUU = Annotated[ArrayProtocol, Literal['n_u', 'n_u']]
+MatXU = Annotated[ArrayProtocol, Literal['n_x', 'n_u']]
+MatUX = Annotated[ArrayProtocol, Literal['n_u', 'n_x']]
 
  
 @dataclass
@@ -20,19 +19,19 @@ class StateEquationRecord:
     nx: int = 0
     nu: int = 0
     
-    A: MatXX = field(default_factory=lambda: np.zeros((0, 0)))
-    B: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
-    C: MatUX = field(default_factory=lambda: np.zeros((0, 0)))
-    D: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
+    A: MatXX = field(default_factory=lambda: G.zeros((0, 0)))
+    B: MatXU = field(default_factory=lambda: G.zeros((0, 0)))
+    C: MatUX = field(default_factory=lambda: G.zeros((0, 0)))
+    D: MatUU = field(default_factory=lambda: G.zeros((0, 0)))
     
-    BV: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
-    DV: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
+    BV: MatXU = field(default_factory=lambda: G.zeros((0, 0)))
+    DV: MatUU = field(default_factory=lambda: G.zeros((0, 0)))
     
-    BI: MatXU = field(default_factory=lambda: np.zeros((0, 0)))
-    DI: MatUU = field(default_factory=lambda: np.zeros((0, 0)))
+    BI: MatXU = field(default_factory=lambda: G.zeros((0, 0)))
+    DI: MatUU = field(default_factory=lambda: G.zeros((0, 0)))
     
-    R: NDArray = field(default_factory=lambda: np.zeros((0, 0)))
-    S: NDArray = field(default_factory=lambda: np.zeros((0, 0)))
+    R: ArrayProtocol = field(default_factory=lambda: G.zeros((0, 0)))
+    S: ArrayProtocol = field(default_factory=lambda: G.zeros((0, 0)))
     
     def as_tuple(self):
         '''_summary_

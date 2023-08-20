@@ -12,7 +12,7 @@ from guilda.branch import Branch
 from guilda.controller import Controller
 from guilda.utils.calc import complex_mat_to_float
 
-from guilda.utils.typing import FloatArray, ComplexArray
+from guilda.backend import ArrayProtocol, ArrayProtocol
 
 
 def f_tmp(t, fs):
@@ -22,12 +22,12 @@ def f_tmp(t, fs):
     return idx
 
 
-def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
+def _sample2f(t: List[float], u: ArrayProtocol) -> Callable[[float], ArrayProtocol]:
     '''_summary_
 
     Args:
         t (List[float]): _description_
-        u (FloatArray): array (2, n)
+        u (ArrayProtocol): array (2, n)
 
     Returns:
         _type_: _description_
@@ -38,7 +38,7 @@ def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
     if u.shape[0] != len(t) and u.shape[1] == len(t):
         u = np.array(u).T
 
-    def ret(T: float) -> FloatArray:
+    def ret(T: float) -> ArrayProtocol:
         ind = len(t) - 1 - ([t_ <= T for t_ in t][::-1]).index(True)
         return u[ind: ind + 1].T
     return ret
@@ -69,7 +69,7 @@ class _PowerNetwork(object):
         self.a_controller_global: List[Controller] = []
 
     @property
-    def x_equilibrium(self) -> List[FloatArray]:
+    def x_equilibrium(self) -> List[ArrayProtocol]:
         return [b.component.x_equilibrium for b in self.a_bus]
 
     @property
@@ -88,12 +88,12 @@ class _PowerNetwork(object):
         
     
 
-    def get_admittance_matrix(self, a_index_bus: Optional[List[int]] = None) -> ComplexArray:
+    def get_admittance_matrix(self, a_index_bus: Optional[List[int]] = None) -> ArrayProtocol:
         if not a_index_bus:
             a_index_bus = list(range(len(self.a_bus)))
 
         n: int = len(self.a_bus)
-        Y: ComplexArray = np.zeros((n, n), dtype=complex)
+        Y: ArrayProtocol = np.zeros((n, n), dtype=complex)
 
         for br in self.a_branch:
             if (br.from_-1 in a_index_bus) and (br.to-1 in a_index_bus):
@@ -109,10 +109,10 @@ class _PowerNetwork(object):
 
         return Y
 
-    def calculate_power_flow(self) -> Tuple[ComplexArray, ComplexArray]:
+    def calculate_power_flow(self) -> Tuple[ArrayProtocol, ArrayProtocol]:
         n: int = len(self.a_bus)
 
-        def func_eq(Y: ComplexArray, x: FloatArray):
+        def func_eq(Y: ArrayProtocol, x: ArrayProtocol):
             Vr = x[0::2]
             Vi = x[1::2]
             V = Vr + 1j*Vi
@@ -142,7 +142,7 @@ class _PowerNetwork(object):
         Ians = Y @ Vans
         return Vans, Ians
 
-    def set_equilibrium(self, V: ComplexArray, I: ComplexArray):
+    def set_equilibrium(self, V: ArrayProtocol, I: ArrayProtocol):
         for idx in range(len(self.a_bus)):
             self.a_bus[idx].set_equilibrium(V[idx][0], I[idx][0])
 
@@ -179,7 +179,7 @@ class _PowerNetwork(object):
         B1 = np.hstack([B, R])
         B2 = np.block([[D, np.zeros([nV, nd])], [np.zeros([nI, nu+nd])]])
         C1 = np.vstack([np.eye(nx), S, np.zeros([nI+nV, nx])])
-        C2: FloatArray = np.vstack([np.zeros([nx+nz, nV+nI]), np.eye(nV+nI)])
+        C2: ArrayProtocol = np.vstack([np.zeros([nx+nz, nV+nI]), np.eye(nV+nI)])
 
         A_ = A11-A12 @ inv(A22) @ A21
         B_ = B1-A12 @ inv(A22) @ B2

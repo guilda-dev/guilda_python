@@ -2,7 +2,7 @@ import numpy as np
 from typing import Tuple, List
 from abc import ABC, abstractmethod as AM
 
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 class Controller(ABC):
     '''_summary_
@@ -28,7 +28,7 @@ class Controller(ABC):
         '''        
         
     @AM
-    def get_dx_u(self, t, x, X, V, I, U_global) -> Tuple[FloatArray, FloatArray]:
+    def get_dx_u(self, t, x, X, V, I, U_global) -> Tuple[ArrayProtocol, ArrayProtocol]:
         '''_summary_
 
         Args:
@@ -40,11 +40,11 @@ class Controller(ABC):
             U_global (_type_): _description_
 
         Returns:
-            Tuple[FloatArray, FloatArray]: _description_
+            Tuple[ArrayProtocol, ArrayProtocol]: _description_
         '''        
         
     @AM
-    def get_dx_u_linear(self, t, x, X, V, I, U_global) -> Tuple[FloatArray, FloatArray]:
+    def get_dx_u_linear(self, t, x, X, V, I, U_global) -> Tuple[ArrayProtocol, ArrayProtocol]:
         '''_summary_
 
         Args:
@@ -56,14 +56,14 @@ class Controller(ABC):
             U_global (_type_): _description_
 
         Returns:
-            Tuple[FloatArray, FloatArray]: _description_
+            Tuple[ArrayProtocol, ArrayProtocol]: _description_
         '''        
 
     def get_dx_u_func(self, linear: bool):
         return self.get_dx_u_linear if linear else self.get_dx_u
 
 
-    def get_x0(self) -> FloatArray:
+    def get_x0(self) -> ArrayProtocol:
         out = np.zeros((self.nx, 1))  # controller.m:28
         return out
 

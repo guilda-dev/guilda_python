@@ -17,17 +17,17 @@ from guilda.base import ComponentEmpty
 
 from guilda.utils.calc import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
-from guilda.utils.typing import ComplexArray, FloatArray
+from guilda.backend import ArrayProtocol, ArrayProtocol
 
 from scikits.odes.dae import dae
 
 
 def get_t_simulated(
     t_cand: List[float], 
-    uf: Callable[[float], FloatArray], 
+    uf: Callable[[float], ArrayProtocol], 
     fault_f: Callable[[float], List[int]]):
     has_difference = np.ones((len(t_cand), 1), dtype=bool) 
-    u: FloatArray = np.array([[np.nan]]) 
+    u: ArrayProtocol = np.array([[np.nan]]) 
     f: List[int] = [-1] 
     for i in range(len(t_cand) - 1):
         unew = uf((t_cand[i] + t_cand[i + 1]) / 2) 
@@ -43,11 +43,11 @@ def get_t_simulated(
     return t_simulated
 
 
-def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
-    ComplexArray, 
-    FloatArray, 
-    ComplexArray, 
-    FloatArray
+def reduce_admittance_matrix(Y: ArrayProtocol, index: Iterable[int]) -> Tuple[
+    ArrayProtocol, 
+    ArrayProtocol, 
+    ArrayProtocol, 
+    ArrayProtocol
 ]:
 
     n_bus = Y.shape[0]
@@ -64,7 +64,7 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
 
     nr_n_reduced = int(np.sum(n_reduced))
 
-    A_reproduce: ComplexArray = np.zeros((n_bus, nr_n_reduced), dtype=complex)
+    A_reproduce: ArrayProtocol = np.zeros((n_bus, nr_n_reduced), dtype=complex)
     A_reproduce[n_reduced] = np.eye(nr_n_reduced)
     A_reproduce[reduced] = -np.linalg.inv(Y22) @ Y21
 
@@ -76,7 +76,7 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
 def simulate(
     self: _PowerNetwork, 
     t: Iterable[float], 
-    u: Optional[FloatArray] = None, # (n_u, n_t)
+    u: Optional[ArrayProtocol] = None, # (n_u, n_t)
     idx_u: Optional[Iterable[int]] = None, 
     options: Optional[SimulationOptions] = None, 
     ):
@@ -122,12 +122,12 @@ def simulate(
 def solve_odes(
     self: _PowerNetwork, 
     t: List[float], 
-    u: FloatArray, # (n_u, n_t)
+    u: ArrayProtocol, # (n_u, n_t)
     idx_u: List[int],
     fault: List[Tuple[Tuple[float, float], List[int]]], 
-    x_in: List[FloatArray], 
-    xkg: List[FloatArray],
-    xk: List[FloatArray],
+    x_in: List[ArrayProtocol], 
+    xkg: List[ArrayProtocol],
+    xk: List[ArrayProtocol],
     V0_in: List[complex], 
     I0_in: List[complex], 
     linear: bool, 
@@ -175,14 +175,14 @@ def solve_odes(
     # :45
     # store simulation result
 
-    sols: List[Tuple[FloatArray, FloatArray, FloatArray, FloatArray]] = [] # (t, x)[]
+    sols: List[Tuple[ArrayProtocol, ArrayProtocol, ArrayProtocol, ArrayProtocol]] = [] # (t, x)[]
     metas: List[SimulationSegment] = []
 
     # initial condition
 
-    x_k: FloatArray = np.vstack(x_in + xkg + xk)
-    V_k: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
-    I_k: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
+    x_k: ArrayProtocol = np.vstack(x_in + xkg + xk)
+    V_k: ArrayProtocol = complex_arr_to_col_vec(np.array(V0_in))
+    I_k: ArrayProtocol = complex_arr_to_col_vec(np.array(I0_in))
 
     # shape etc.
 
@@ -252,10 +252,10 @@ def solve_odes(
 
         def func_(
             t: float, 
-            x: FloatArray, 
-            u: Callable[[float], FloatArray],
-            xdot: FloatArray,
-            res: FloatArray,
+            x: ArrayProtocol, 
+            u: Callable[[float], ArrayProtocol],
+            xdot: ArrayProtocol,
+            res: ArrayProtocol,
         ):
 
             dx, con = get_dx_con(
@@ -334,9 +334,9 @@ def solve_odes(
     pbar.close()
 
 
-    x_part: List[FloatArray] = []
-    V_part: List[FloatArray] = []
-    I_part: List[FloatArray] = []
+    x_part: List[ArrayProtocol] = []
+    V_part: List[ArrayProtocol] = []
+    I_part: List[ArrayProtocol] = []
 
     idx = 0
     for nx in nx_bus:

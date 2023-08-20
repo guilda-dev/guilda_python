@@ -5,7 +5,7 @@ import numpy as np
 from guilda.base import StateEquationRecord
 from guilda.load.load import Load
 from guilda.utils.data import complex_to_col_vec
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 class LoadPower(Load):
     '''モデル：定電力負荷モデル
@@ -41,18 +41,18 @@ class LoadPower(Load):
         self,
         V: complex = 0,
         I: complex = 0,
-        x: Optional[FloatArray] = None,
-        u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
+        x: Optional[ArrayProtocol] = None,
+        u: Optional[ArrayProtocol] = None,
+        t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert u is not None
-        dx: FloatArray = np.zeros((0, 1))
+        dx: ArrayProtocol = np.zeros((0, 1))
         PQ = self.P_st * (1 + u[0, 0]) + 1j * self.Q_st * (1 + u[1, 0])
         I_ = PQ/V
         constraint = complex_to_col_vec(I) - complex_to_col_vec(I_)
         return dx, constraint
 
 
-    def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
+    def get_linear_matrix(self, V: complex = 0, x: Optional[ArrayProtocol] = None) -> StateEquationRecord:
         if x is None:
             V = self.V_equilibrium
         
@@ -62,15 +62,15 @@ class LoadPower(Load):
         P = self.P_st
         Q = self.Q_st
 
-        A = np.zeros([0, 0])
-        B = np.zeros([0, 2])
-        C = np.zeros([2, 0])
+        A = np.zeros((0, 0))
+        B = np.zeros((0, 2))
+        C = np.zeros((2, 0))
         D = np.array([[P*Vr, Q*Vi], [P*Vi, -Q*Vr]])/abs(V)
-        BV = np.zeros([0, 2])
+        BV = np.zeros((0, 2))
         DV = np.array([[P, Q], [-Q, P]]) @ np.array([[(Vi**2 - Vr**2)/den, -2*Vr*Vi/den], [-2*Vr*Vi/den, (Vr**2 - Vi**2)/den]])
         R = self.R
         S = self.S
-        BI = np.zeros([0, 2])
+        BI = np.zeros((0, 2))
         DI = -np.identity(2)
 
         return StateEquationRecord(

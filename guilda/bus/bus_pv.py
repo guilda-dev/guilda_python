@@ -1,4 +1,5 @@
-import numpy as np
+import guilda.backend as G
+
 from numpy.linalg import norm
 
 from guilda.bus.bus import Bus
@@ -10,8 +11,8 @@ class BusPV(Bus):
         self.Vabs: float = Vabs
 
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
-        Vabs = norm([Vr, Vi])
-        return np.array([
+        Vabs = float(norm([Vr, Vi]))
+        return G.array([
             [P-self.P],
             [Vabs-self.Vabs]
         ])

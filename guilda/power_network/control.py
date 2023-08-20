@@ -4,7 +4,7 @@ import numpy as np
 from guilda.bus import Bus
 from guilda.controller import Controller
 from guilda.utils.data import sep_col_vec
-from guilda.utils.typing import FloatArray
+from guilda.backend import ArrayProtocol
 
 
 def get_dx_con(
@@ -12,14 +12,14 @@ def get_dx_con(
     bus: List[Bus],
     controllers_global: List[Controller],
     controllers: List[Controller],
-    Ymat: FloatArray,
+    Ymat: ArrayProtocol,
     nx_bus: List[int],
     nx_controller_global: List[int],
     nx_controller: List[int],
     nu_bus: List[int],
     t: float,
-    x_all: FloatArray,
-    u: FloatArray,
+    x_all: ArrayProtocol,
+    u: ArrayProtocol,
     idx_u: List[int],
     idx_fault: List[int],
         simulated_bus: List[int]):
@@ -97,8 +97,8 @@ def get_dx_con(
         U_bus[i] += u[idx:idx+nu_bus[i]]
         idx += nu_bus[i]
 
-    dx_component: List[FloatArray] = []
-    constraint: List[FloatArray] = []
+    dx_component: List[ArrayProtocol] = []
+    constraint: List[ArrayProtocol] = []
 
     for idx in simulated_bus:
         f = bus[idx].component.get_dx_con_func(linear)

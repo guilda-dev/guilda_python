@@ -168,5 +168,9 @@ class ClassProperty(Generic[T]):
         self.cb_del = func
         return func
 
+
+
+
+
 __all__ = ['ClassProperty']
 
