@@ -37,8 +37,8 @@ def __cvec(object: ArrayLike, *args, **kwargs):
     return ret.reshape((ret.size, 1))
 
 def init_numpy(bitlen: BitLenType, p: 'guilda.backend.protocol'):
-    dtype = __dtype_selector.get(bitlen, np.float64)
-    dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
+    p.dtype = __dtype_selector.get(bitlen, np.float64)
+    p.dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
 
     p.array = np.array
     p.zeros = np.zeros
@@ -55,4 +55,5 @@ def init_numpy(bitlen: BitLenType, p: 'guilda.backend.protocol'):
     p.rvec = __rvec
     p.cvec = __cvec
     
+    p.asnp = lambda x: x
     

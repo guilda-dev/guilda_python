@@ -1,5 +1,8 @@
 import numpy as np
+import guilda.backend as G
+
 from numpy.linalg import inv
+from numpy.typing import NDArray
 
 from scipy.optimize import root
 from scipy.linalg import block_diag
@@ -36,7 +39,7 @@ def _sample2f(t: List[float], u: ArrayProtocol) -> Callable[[float], ArrayProtoc
     #     return lambda _: np.zeros((0, 0))
     
     if u.shape[0] != len(t) and u.shape[1] == len(t):
-        u = np.array(u).T
+        u = G.array(u).T
 
     def ret(T: float) -> ArrayProtocol:
         ind = len(t) - 1 - ([t_ <= T for t_ in t][::-1]).index(True)
@@ -93,7 +96,7 @@ class _PowerNetwork(object):
             a_index_bus = list(range(len(self.a_bus)))
 
         n: int = len(self.a_bus)
-        Y: ArrayProtocol = np.zeros((n, n), dtype=complex)
+        Y: ArrayProtocol = G.zeros((n, n), dtype=G.dtype_c)
 
         for br in self.a_branch:
             if (br.from_-1 in a_index_bus) and (br.to-1 in a_index_bus):
@@ -112,7 +115,7 @@ class _PowerNetwork(object):
     def calculate_power_flow(self) -> Tuple[ArrayProtocol, ArrayProtocol]:
         n: int = len(self.a_bus)
 
-        def func_eq(Y: ArrayProtocol, x: ArrayProtocol):
+        def func_eq(Y: NDArray, x: NDArray):
             Vr = x[0::2]
             Vi = x[1::2]
             V = Vr + 1j*Vi
@@ -130,17 +133,18 @@ class _PowerNetwork(object):
             return out.flatten()
 
         Y = self.get_admittance_matrix()
+        Y_np = G.asnp(Y)
         x0 = np.array([1, 0] * n).reshape((-1, 1))
 
         # this one definitely requires numpy backend
-        ans = root(lambda x: func_eq(Y, x), x0, method="hybr")
+        ans = root(lambda x: func_eq(Y_np, x), x0, method="hybr")
 
         Vrans = np.array([[ans.x[i]] for i in range(0, len(ans.x), 2)])
         Vians = np.array([[ans.x[i]] for i in range(1, len(ans.x), 2)])
         Vans = Vrans + 1j*Vians
 
         Ians = Y @ Vans
-        return Vans, Ians
+        return G.array(Vans), Ians
 
     def set_equilibrium(self, V: ArrayProtocol, I: ArrayProtocol):
         for idx in range(len(self.a_bus)):
@@ -171,7 +175,7 @@ class _PowerNetwork(object):
         Y = self.get_admittance_matrix()
         Ymat = complex_mat_to_float(Y)
         
-
+        # TODO replace backend
         A11 = A
         A12 = np.hstack([BV, BI])
         A21 = np.vstack([C, np.zeros((nI, nx))])
