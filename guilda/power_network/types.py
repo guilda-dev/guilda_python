@@ -1,7 +1,7 @@
 
 from dataclasses import dataclass, field
 from typing import List, Tuple, Union, Literal, Any
-import numpy as np
+import guilda.backend as G
 
 from guilda.power_network.base import _PowerNetwork
 from guilda.backend import ArrayProtocol
@@ -27,7 +27,7 @@ class SimulationOptions:
     
     do_report: bool = False
     do_retry: bool = True
-    reset_time: float = np.inf
+    reset_time: float = G.inf
     OutputFcn: List[Any] = field(default_factory = list)
     
     tools: bool = False
@@ -53,13 +53,11 @@ class SimulationSegment:
     simulated_bus: List[int] = field(default_factory=list)
     fault_bus: List[int] = field(default_factory=list)
     
-    impedance_matrix: ArrayProtocol = field(default_factory=lambda: np.zeros((0, 0)))
+    impedance_matrix: ArrayProtocol = field(default_factory=lambda: G.zeros((0, 0)))
     
     solution: Any = None
     
         
-EMPTY_ARR = np.zeros((0, 0))
-EMPTY_ARR.setflags(write=False)
 
 @dataclass
 class SimulationResult:
@@ -68,7 +66,7 @@ class SimulationResult:
     
     segments: List[SimulationSegment] = field(default_factory=list)
     
-    t: ArrayProtocol = field(default_factory=lambda: np.zeros((0,)))
+    t: ArrayProtocol = field(default_factory=lambda: G.zeros((0,)))
     nx_bus: List[int] = field(default_factory=list)
     nu_bus: List[int] = field(default_factory=list)
     

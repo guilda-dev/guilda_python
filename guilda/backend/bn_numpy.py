@@ -8,17 +8,17 @@ from guilda.backend.protocol import ArrayProtocol
 from guilda.backend.types import BitLenType, ArrayLike, KernelType, ShapeLike, ShapeLike1, ShapeLike2, NumberLike
 
 __dtype_selector = {
-  16: np.float16,
-  32: np.float32,
-  64: np.float64,
-  128: np.float128,
+    16: np.float16,
+    32: np.float32,
+    64: np.float64,
+    128: np.float64,
 }
 
 __dtype_selector_c = {
-  16: np.complex64,
-  32: np.complex64,
-  64: np.complex128,
-  128: np.complex256,
+    16: np.complex64,
+    32: np.complex64,
+    64: np.complex128,
+    128: np.complex128,
 }
 
 class NumPyArray(ArrayProtocol):
