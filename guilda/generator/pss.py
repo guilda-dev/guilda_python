@@ -1,4 +1,4 @@
-import numpy as np
+import guilda.backend as G
 from control import StateSpace as SS
 
 from typing import Union, Tuple, List
@@ -17,10 +17,10 @@ class Pss():
     '''
     def __init__(self, pss_in: Union[PssParameters, SS, None] = None):
 
-        self.A: ArrayProtocol = np.zeros((0, 0))
-        self.B: ArrayProtocol = np.zeros((0, 1))
-        self.C: ArrayProtocol = np.zeros((1, 0))
-        self.D: ArrayProtocol = np.zeros((1, 1))
+        self.A: ArrayProtocol = G.zeros((0, 0))
+        self.B: ArrayProtocol = G.zeros((0, 1))
+        self.C: ArrayProtocol = G.zeros((1, 0))
+        self.D: ArrayProtocol = G.zeros((1, 1))
         self._nx: int = 0
 
         if isinstance(pss_in, PssParameters) or isinstance(pss_in, SS):
@@ -51,7 +51,7 @@ class Pss():
         return dx, u
 
     def initialize(self) -> ArrayProtocol:
-        x: ArrayProtocol = np.zeros((self.nx, 1))
+        x: ArrayProtocol = G.zeros((self.nx, 1))
         return x
 
     def get_sys(self) -> SS:
@@ -63,7 +63,7 @@ class Pss():
             Kpss, Tpss, TL1p, TL1, TL2p, TL2 = \
                 pss.Kpss, pss.Tpss, pss.TL1p, pss.TL1, pss.TL2p, pss.TL2
 
-            self.A = np.array(
+            self.A = G.array(
                 [
                     [-1/Tpss, 0., 0.],
                     [-Kpss*(1-TL1p/TL1)/(Tpss*TL1), -1/TL1, 0.],
@@ -71,19 +71,19 @@ class Pss():
                      (1-TL2p/TL2)/TL2, -1/TL2]
                 ])  # (3, 3)
 
-            self.B = np.array(
+            self.B = G.array(
                 [
                     [1/Tpss],
                     [Kpss*(1-TL1p/TL1)/(Tpss*TL1)],
                     [(Kpss*TL1p)*(1-TL2p/TL2)/(Tpss*TL1*TL2)]
                 ])  # (3, 1)
 
-            self.C = np.array(
+            self.C = G.array(
                 [
                     [-(Kpss*TL1p*TL2p)/(Tpss*TL1*TL2), TL2p/TL2, 1.],
                 ])  # (1, 3)
 
-            self.D = np.array(
+            self.D = G.array(
                 [
                     [(Kpss*TL1p*TL2p)/(Tpss*TL1*TL2)]
                 ])  # (1, 1)
@@ -91,4 +91,4 @@ class Pss():
             # pssが状態空間表現SSオブジェクトであると仮定する
             self.A, self.B, self.C, self.D = pss.A, pss.B, pss.C, pss.D  # type: ignore
 
-        self._nx = np.shape(self.A)[0]
+        self._nx = self.A.shape[0]

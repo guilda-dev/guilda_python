@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-import numpy as np
+import guilda.backend as G
 
 from guilda.base import StateEquationRecord
 from guilda.load.load import Load
@@ -34,7 +34,7 @@ class LoadImpedance(Load):
         u: Optional[ArrayProtocol] = None,
         t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert u is not None
-        dx = np.zeros((0, 1))
+        dx = G.zeros((0, 1))
         Y_vec = complex_to_col_vec(self.Y) * (1 + u[:2, :1])
         Y = Y_vec[0, 0] + 1j * Y_vec[1, 0]
         I_ = Y * V
@@ -45,23 +45,23 @@ class LoadImpedance(Load):
         if x is None:
             V = self.V_equilibrium
 
-        A = np.zeros((0, 0))
-        B = np.zeros((0, 2))
-        C = np.zeros((2, 0))
+        A = G.zeros((0, 0))
+        B = G.zeros((0, 2))
+        C = G.zeros((2, 0))
         D1 = complex_to_matrix(self.Y.real) @ complex_to_col_vec(V)
         D2 = complex_to_matrix(
             1j*(self.Y.imag)) @ complex_to_col_vec(V)
-        D = np.hstack([D1, D2])
-        BV = np.zeros((0, 2))
+        D = G.hstack([D1, D2])
+        BV = G.zeros((0, 2))
         DV = self.Y_mat
         R = self.R
         S = self.S
-        BI = np.zeros((0, 2))
-        DI = -np.identity(2)
+        BI = G.zeros((0, 2))
+        DI = -G.identity(2)
         
         return StateEquationRecord(
             nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
-            BV=BV, DV=DV.astype(BV.dtype), BI=BI, DI=DI,
+            BV=BV, DV=DV, BI=BI, DI=DI,
             R=R, S=S
         )

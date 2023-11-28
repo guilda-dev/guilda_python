@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-import numpy as np
+import guilda.backend as G
 
 from guilda.base import StateEquationRecord
 from guilda.load.load import Load
@@ -45,7 +45,7 @@ class LoadPower(Load):
         u: Optional[ArrayProtocol] = None,
         t: float = 0) -> Tuple[ArrayProtocol, ArrayProtocol]:
         assert u is not None
-        dx: ArrayProtocol = np.zeros((0, 1))
+        dx: ArrayProtocol = G.zeros((0, 1))
         PQ = self.P_st * (1 + u[0, 0]) + 1j * self.Q_st * (1 + u[1, 0])
         I_ = PQ/V
         constraint = complex_to_col_vec(I) - complex_to_col_vec(I_)
@@ -62,21 +62,21 @@ class LoadPower(Load):
         P = self.P_st
         Q = self.Q_st
 
-        A = np.zeros((0, 0))
-        B = np.zeros((0, 2))
-        C = np.zeros((2, 0))
-        D = np.array([[P*Vr, Q*Vi], [P*Vi, -Q*Vr]])/abs(V)
-        BV = np.zeros((0, 2))
-        DV = np.array([[P, Q], [-Q, P]]) @ np.array([[(Vi**2 - Vr**2)/den, -2*Vr*Vi/den], [-2*Vr*Vi/den, (Vr**2 - Vi**2)/den]])
+        A = G.zeros((0, 0))
+        B = G.zeros((0, 2))
+        C = G.zeros((2, 0))
+        D = G.array([[P*Vr, Q*Vi], [P*Vi, -Q*Vr]]) * (1 / abs(V))
+        BV = G.zeros((0, 2))
+        DV = G.array([[P, Q], [-Q, P]]) @ G.array([[(Vi**2 - Vr**2)/den, -2*Vr*Vi/den], [-2*Vr*Vi/den, (Vr**2 - Vi**2)/den]])
         R = self.R
         S = self.S
-        BI = np.zeros((0, 2))
-        DI = -np.identity(2)
+        BI = G.zeros((0, 2))
+        DI = -G.identity(2)
 
         return StateEquationRecord(
             nx=self.nx, nu=self.nu,
             A=A, B=B, C=C, D=D,
-            BV=BV, DV=DV.astype(BV.dtype), BI=BI, DI=DI,
+            BV=BV, DV=DV, BI=BI, DI=DI,
             R=R, S=S
         )
 

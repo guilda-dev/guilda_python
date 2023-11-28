@@ -1,5 +1,6 @@
+import guilda.backend as G
+
 from control import StateSpace as SS
-import numpy as np
 
 from guilda.backend import ArrayProtocol
 
@@ -9,10 +10,10 @@ class Governor(object):
         self.P: float = 0
         
         # ここではgovernorのダイナミクスを考慮しない
-        A: ArrayProtocol = np.zeros((0, 0))
-        B: ArrayProtocol = np.zeros((0, 1))
-        C: ArrayProtocol = np.zeros((1, 0))
-        D: ArrayProtocol = np.identity(2)
+        A: ArrayProtocol = G.zeros((0, 0))
+        B: ArrayProtocol = G.zeros((0, 1))
+        C: ArrayProtocol = G.zeros((1, 0))
+        D: ArrayProtocol = G.identity(2)
         sys = SS(A, B, C, D)
         SS.set_inputs(sys, ['omega_governor', 'u_governor'])
         SS.set_outputs(sys, ['omega_governor', 'Pmech'])
@@ -22,7 +23,7 @@ class Governor(object):
     def initialize(self, P: float) -> ArrayProtocol:
         self.P = P
         # governorに状態はない
-        x: ArrayProtocol = np.zeros((0, 1))
+        x: ArrayProtocol = G.zeros((0, 1))
         return x
 
     @property
@@ -31,7 +32,7 @@ class Governor(object):
 
     def get_P(self, x: ArrayProtocol, u: ArrayProtocol):
         P: float = self.P + u[0, 0]
-        dx: ArrayProtocol = np.zeros((0, 1))
+        dx: ArrayProtocol = G.zeros((0, 1))
         return (dx, P)
 
     def get_sys(self) -> SS:

@@ -1,10 +1,13 @@
+import guilda.backend as G
 import numpy as np
+
 from guilda.power_network import SimulationOptions
 
 import guilda.models as sample
 
 import matplotlib.pyplot as plt
 
+G.set_config('numpy')
 
 np.set_printoptions(
     precision=6, 
@@ -27,7 +30,7 @@ options = SimulationOptions(
 
 result = net.simulate(
     (0, 10), 
-    np.array([
+    G.array([
         [0, 0],
         [0, 0],
         [0, 0],

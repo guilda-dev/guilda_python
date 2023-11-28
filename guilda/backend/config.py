@@ -4,6 +4,7 @@ from guilda.backend.types import BitLenType, KernelType
 
 
 import guilda.backend.bn_numpy as __np
+import guilda.backend.bn_torch as __torch
 
 __valid_kernels: Set[KernelType] = {'numpy', 'sympy', 'torch', 'cupy'}
     
@@ -43,3 +44,5 @@ def init_by_config():
     import guilda.backend as p
     if __kernel == 'numpy':
         __np.init_numpy(__bitlen, p)
+    if __kernel == 'torch':
+        __torch.init_torch(__bitlen, p)

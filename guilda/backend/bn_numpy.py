@@ -8,17 +8,17 @@ from guilda.backend.protocol import ArrayProtocol
 from guilda.backend.types import BitLenType, ArrayLike, KernelType, ShapeLike, ShapeLike1, ShapeLike2, NumberLike
 
 __dtype_selector = {
-  16: np.float16,
-  32: np.float32,
-  64: np.float64,
-  128: np.float128,
+    16: np.float16,
+    32: np.float32,
+    64: np.float64,
+    128: np.float64,
 }
 
 __dtype_selector_c = {
-  16: np.complex64,
-  32: np.complex64,
-  64: np.complex128,
-  128: np.complex256,
+    16: np.complex64,
+    32: np.complex64,
+    64: np.complex128,
+    128: np.complex128,
 }
 
 class NumPyArray(ArrayProtocol):
@@ -37,8 +37,8 @@ def __cvec(object: ArrayLike, *args, **kwargs):
     return ret.reshape((ret.size, 1))
 
 def init_numpy(bitlen: BitLenType, p: 'guilda.backend.protocol'):
-    dtype = __dtype_selector.get(bitlen, np.float64)
-    dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
+    p.dtype = __dtype_selector.get(bitlen, np.float64)
+    p.dtype_c = __dtype_selector_c.get(bitlen, np.complex128)
 
     p.array = np.array
     p.zeros = np.zeros
@@ -55,4 +55,5 @@ def init_numpy(bitlen: BitLenType, p: 'guilda.backend.protocol'):
     p.rvec = __rvec
     p.cvec = __cvec
     
+    p.asnp = lambda x: x
     

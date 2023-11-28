@@ -2,6 +2,9 @@ import numpy as np
 
 pi = np.pi
 e = np.e
+nan = np.nan
+inf = np.inf
+NaN = np.NaN
 
 # def array(object):
 #     pass
