@@ -21,7 +21,7 @@ __dtype_selector_c = {
     128: torch.complex128,
 }
 
-class TorchArray(ArrayProtocol):
+class TorchArray(torch.Tensor, ArrayProtocol):
     
     def __new__(cls, o):
         return o

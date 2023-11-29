@@ -21,7 +21,7 @@ __dtype_selector_c = {
     128: np.complex128,
 }
 
-class NumPyArray(ArrayProtocol):
+class NumPyArray(np.ndarray, ArrayProtocol):
     
     def __new__(cls, o):
         return o
