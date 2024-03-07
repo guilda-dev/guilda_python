@@ -10,7 +10,7 @@ from tqdm import tqdm
 from guilda.bus.bus import Bus
 from guilda.controller.controller import Controller
 
-from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
+from guilda.power_network.base import _PowerNetwork
 
 from guilda.power_network.types import BusConnect, BusFault, BusInput, SimulationOptions, SimulationResult, SimulationSegment, SimulationScenario
 from guilda.power_network.control import get_dx_con
@@ -24,28 +24,6 @@ from guilda.utils.typing import ComplexArray, FloatArray
 
 from assimulo.problem import Implicit_Problem
 from assimulo.solvers import IDA
-
-
-def get_t_simulated(
-        t_cand: List[float],
-        uf: Callable[[float], FloatArray],
-        fault_f: Callable[[float], List[int]]):
-    has_difference = np.ones((len(t_cand), 1), dtype=bool)
-    u: FloatArray = np.array([[np.nan]])
-    f: List[int] = [-1]
-    for i in range(len(t_cand) - 1):
-        unew = uf((t_cand[i] + t_cand[i + 1]) / 2)
-        fnew = fault_f((t_cand[i] + t_cand[i + 1]) / 2)
-        if any(unew != u) \
-                or len(f) != len(fnew) \
-                or any([f[i] != fnew[i] for i in range(len(f))]):
-            u = unew
-            f = fnew
-        else:
-            has_difference[i] = False
-    t_simulated = [t_cand[i] for i in range(len(t_cand)) if has_difference[i]]
-    return t_simulated
-
 
 def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     ComplexArray,
@@ -64,7 +42,7 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     Y22 = Y[reduced][:, reduced]
 
     Y_reduced = Y11 - Y12 @ np.linalg.inv(Y22) @ Y21
-    Ymat_reduced = complex_mat_to_float(Y_reduced)
+    Y_mat_reduced = complex_mat_to_float(Y_reduced)
 
     nr_n_reduced = int(np.sum(n_reduced))
 
@@ -72,9 +50,9 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
     A_reproduce[n_reduced] = np.eye(nr_n_reduced)
     A_reproduce[reduced] = -np.linalg.inv(Y22) @ Y21
 
-    Amat_reproduce = complex_mat_to_float(A_reproduce)
+    A_mat_reproduce = complex_mat_to_float(A_reproduce)
 
-    return Y_reduced, Ymat_reduced, A_reproduce, Amat_reproduce
+    return Y_reduced, Y_mat_reduced, A_reproduce, A_mat_reproduce
 
 
 def simulate(
@@ -132,6 +110,7 @@ def solve_odes(
 ):
     
     # build controller index map
+    
     ctrls_global_indices = [
         (
             [bus_index_map[x] for x in c.index_observe],
@@ -170,9 +149,9 @@ def solve_odes(
     # :45
     # store simulation result
 
-    sols: List[Tuple[FloatArray, FloatArray,
+    sol_list: List[Tuple[FloatArray, FloatArray,
                      FloatArray, FloatArray]] = []  # (t, x)[]
-    metas: List[SimulationSegment] = []
+    meta_list: List[SimulationSegment] = []
 
     # initial condition
 
@@ -184,11 +163,11 @@ def solve_odes(
 
     nx = x_k.size
 
-    # :88
+    # define p-bar
 
-    pbar = tqdm(total=1)
+    progress_bar = tqdm(total=1)
 
-    pbar.update(0)
+    progress_bar.update(0)
     ti = t_simulated[0]
     tf = t_simulated[-1]
     
@@ -251,7 +230,7 @@ def solve_odes(
         cur_sim_buses = sorted(set(range(len(buses))) -
                                (set(idx_empty_buses) - must_include_buses))
 
-        _, Ymat, __, Ymat_reproduce \
+        _, admittance_reduced, __, admittance_reproduce \
             = reduce_admittance_matrix(system_admittance, cur_sim_buses)
 
         meta = SimulationSegment(
@@ -259,7 +238,7 @@ def solve_odes(
             time_end=tend,
             simulated_buses=cur_sim_buses,
             fault_buses=cur_fault_buses,
-            admittance=Ymat_reproduce,
+            admittance=admittance_reproduce,
         )
 
         idx_sim_buses: List[int] = [
@@ -279,9 +258,9 @@ def solve_odes(
         if i == 0:
             # add initial value records
             _X = x_dae[:nx, :].T
-            _V = x_dae[nx: nx + nV, :].T @ Ymat_reproduce.T
+            _V = x_dae[nx: nx + nV, :].T @ admittance_reproduce.T
             _I = _V @ system_admittance_float.T
-            sols.append((
+            sol_list.append((
                 np.array([tstart]),
                 # x,
                 _X,
@@ -289,45 +268,33 @@ def solve_odes(
                 _I,
             ))
 
-        # mass = block_diag(np.eye(nx), np.zeros((nVI, nVI)))
-
         # define the equation
 
         def func(
             t: float,
             x: FloatArray,
-            xdot: FloatArray,
-            # res: FloatArray,
+            dx: FloatArray,
         ):
 
-            dx, con = get_dx_con(
+            dx_calc, con = get_dx_con(
                 options.linear,
                 buses, ctrls_global, ctrls, ctrls_global_indices, ctrls_indices, 
-                Ymat,
+                admittance_reduced,
                 nx_bus, nx_kg, nx_k, nu_bus,
                 t, x.reshape(
                     (-1, 1)), get_input, u_indices, cur_fault_buses, cur_sim_buses
             )
 
-            n = dx.size
-            # res[:n] = dx.flatten() - xdot[:n]
-            # res[n:] = con.flatten()
+            n = dx_calc.size
 
-            pbar_val = (t - ti) / (tf - ti)
-            pbar.update(pbar_val - pbar.n)
-
-            ret = np.concatenate([dx.flatten() - xdot[:n], con.flatten()])
-            return ret
             # TODO add reporter?
+            progress_val = (t - ti) / (tf - ti)
+            progress_bar.update(progress_val - progress_bar.n)
 
-        # :138
+            ret = np.concatenate([dx_calc.flatten() - dx[:n], con.flatten()])
+            return ret
 
-        # solver = dae(
-        #     options.solver_method, func,
-        #     compute_initcond='yp0', first_step_size=1e-18,
-        #     atol=options.atol, rtol=options.rtol,
-        #     algebraic_vars_idx=list(range(nx, x_dae.size)),
-        # )
+        # solve the equation
 
         x_0 = x_dae.flatten()
         dx_0 = x_0 * 0  # this will be computed by the solver
@@ -350,35 +317,35 @@ def solve_odes(
         y = y_orig.T
         
         
-        # :143~148
+        # concatenate results
 
         X = y[:nx, :].T
-        V = y[nx: nx + nV, :].T @ Ymat_reproduce.T
+        V = y[nx: nx + nV, :].T @ admittance_reproduce.T
         I = V @ system_admittance_float.T
 
         x_k = X[-1:].T
         V_k = V[-1:].T
         I_k = I[-1:].T
 
-        ifault = np.array([
+        i_fault = np.array([
             [x * 2, x * 2 + 1] for x in cur_fault_buses
         ], dtype=int)  # (n_fault, 2)
-        I[:, ifault.flatten()] = y[nx + nV:, :].T
+        I[:, i_fault.flatten()] = y[nx + nV:, :].T
 
         if options.save_solution:
             meta.solution = (t_sol, y_orig, dy)
 
-        metas.append(meta)
-        sols.append((t_sol[0:], X, V, I))
+        meta_list.append(meta)
+        sol_list.append((t_sol[0:], X, V, I))
 
     t_all, x_all, V_all, I_all = [
-        np.concatenate([x[i] for x in sols]) if i == 0 else np.vstack(
-            [x[i] for x in sols])
+        np.concatenate([x[i] for x in sol_list]) if i == 0 else np.vstack(
+            [x[i] for x in sol_list])
         for i in range(4)
     ]
 
-    pbar.update(1)
-    pbar.close()
+    progress_bar.update(1)
+    progress_bar.close()
 
     x_part: List[FloatArray] = []
     V_part: List[FloatArray] = []
@@ -396,7 +363,7 @@ def solve_odes(
         t=t_all,
         nx_bus=nx_bus,
         nu_bus=nu_bus,
-        segments=metas,
+        segments=meta_list,
         linear=options.linear,
         x=x_part,
         V=V_part,

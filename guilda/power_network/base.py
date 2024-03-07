@@ -15,50 +15,6 @@ from guilda.utils.calc import complex_mat_to_float
 from guilda.utils.typing import FloatArray, ComplexArray
 
 
-def f_tmp(t, fs):
-    idx = []
-    for itr in range(fs):
-        idx.append(fs[itr](t))
-    return idx
-
-
-def _sample2f(t: List[float], u: FloatArray) -> Callable[[float], FloatArray]:
-    '''_summary_
-
-    Args:
-        t (List[float]): _description_
-        u (FloatArray): array (2, n)
-
-    Returns:
-        _type_: _description_
-    '''
-    # if not u.any() or not u[1].any():
-    #     return lambda _: np.zeros((0, 0))
-    
-    if u.shape[0] != len(t) and u.shape[1] == len(t):
-        u = np.array(u).T
-
-    def ret(T: float) -> FloatArray:
-        ind = len(t) - 1 - ([t_ <= T for t_ in t][::-1]).index(True)
-        return u[ind: ind + 1].T
-    return ret
-
-def _idx2f_inner(t: float, fault_time: List[Tuple[float, float]], idx_fault: List[List[int]]) -> List[int]:
-    ret: List[int] = []
-    for (ts, i) in zip(fault_time, idx_fault):
-        if (ts[0] <= t and t < ts[1]):
-            ret.extend(i)
-    return ret
-
-
-def _idx2f(fault_time: List[Tuple[float, float]], idx_fault: List[List[int]]) -> Callable[[float], List[int]]:
-    
-    if not fault_time:
-        return lambda _: []
-    
-    return lambda t: _idx2f_inner(t, fault_time, idx_fault)
-
-
 class _PowerNetwork(object):
 
     def __init__(self):
@@ -66,7 +22,7 @@ class _PowerNetwork(object):
         self.a_bus_dict: Dict[Hashable, Bus] = {}
         self.bus_indices_cache: Optional[List[Hashable]] = None
         self.bus_index_map_cache: Optional[Dict[Hashable, int]] = None
-        
+
         self.a_branch: List[Branch] = []
         self.a_controller_local: List[Controller] = []
         self.a_controller_global: List[Controller] = []
@@ -101,17 +57,17 @@ class _PowerNetwork(object):
 
     def add_branch(self, *branch: Branch):
         self.a_branch.extend(branch)
-        
+
     @property
     def a_bus(self):
         return self.a_bus_dict.values()
-        
+
     @property
     def bus_indices(self):
         if self.bus_indices_cache is None:
             self.bus_indices_cache = list(self.a_bus_dict.keys())
         return self.bus_indices_cache
-    
+
     @property
     def bus_index_map(self):
         if self.bus_index_map_cache is None:
@@ -120,12 +76,11 @@ class _PowerNetwork(object):
                 m[i] = len(m)
             self.bus_index_map_cache = m
         return self.bus_index_map_cache
-    
-    
+
     def sort_buses(self):
-        sorted_buses = dict(sorted(self.a_bus_dict.items(), key=lambda item: item[1])) # type: ignore
+        sorted_buses = dict(sorted(self.a_bus_dict.items(),
+                            key=lambda item: item[1]))  # type: ignore
         self.a_bus_dict = sorted_buses
-        
 
     def get_admittance_matrix(self, bus_index_map: Optional[Dict[Hashable, int]] = None) -> ComplexArray:
         if not bus_index_map:
@@ -194,7 +149,7 @@ class _PowerNetwork(object):
         self.set_equilibrium(V, I)
 
     def get_sys(self):
-        
+
         # A, B, C, D, BV, DV, BI, DI, R, S
         mats = [[np.zeros((0, 0))] * len(self.a_bus_dict) for _ in range(10)]
         for index, i in self.bus_index_map.items():
@@ -215,7 +170,6 @@ class _PowerNetwork(object):
         nz = S.shape[0]
         Y = self.get_admittance_matrix()
         Ymat = complex_mat_to_float(Y)
-        
 
         A11 = A
         A12 = np.hstack([BV, BI])
@@ -231,5 +185,3 @@ class _PowerNetwork(object):
         C_ = C1-C2 @ inv(A22) @ A21
         D_ = 0-C2 @ inv(A22) @ B2
         return [A_, B_, C_, D_]
-
-
