@@ -1,3 +1,5 @@
+from typing import Hashable
+
 import numpy as np
 from numpy.linalg import norm
 from cmath import phase
@@ -6,8 +8,8 @@ from guilda.bus.bus import Bus
 
 
 class BusSlack(Bus):
-    def __init__(self, Vabs: float, Vangle: float, shunt: complex):
-        super().__init__(shunt)
+    def __init__(self, Vabs: float, Vangle: float, shunt: complex, index: Hashable = None):
+        super().__init__(shunt, index=index)
         self.Vabs: float = Vabs
         self.Vangle: float = Vangle
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Hashable
 
 from abc import ABC, abstractmethod as AM
 
@@ -10,7 +10,10 @@ from guilda.utils.typing import FloatArray
 
 class Bus(ABC):
 
-    def __init__(self, shunt: complex):
+    def __init__(self, shunt: complex, index: Hashable = None):
+        
+        self.index = index
+        
         self.V_equilibrium: Optional[complex] = None
         self.I_equilibrium: Optional[complex] = None
         self.component: Component = None # type: ignore

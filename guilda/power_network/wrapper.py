@@ -20,8 +20,9 @@ class PowerNetwork(_PowerNetwork):
         return simulate(self, t, u, idx_u, options)
     
     def print_bus_state(self) -> None:
-        for i, b in enumerate(self.a_bus):
-            print(f"Bus #{i + 1} {type(b)}: ")
+        for index in self.bus_index_map:
+            b = self.a_bus_dict[index]
+            print(f"Bus #{index} {type(b)}: ")
             print(f"  Vst: {b.V_equilibrium}")
             print(f"  Ist: {b.I_equilibrium}")
             print(f"  component.Vst: {b.component.V_equilibrium}")

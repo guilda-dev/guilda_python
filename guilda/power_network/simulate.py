@@ -4,7 +4,7 @@ import numpy as np
 
 from functools import reduce
 
-from typing import Tuple, List, Callable, Optional, Iterable
+from typing import Tuple, List, Callable, Optional, Iterable, Hashable, Dict
 
 from tqdm import tqdm
 from guilda.bus.bus import Bus
@@ -19,6 +19,7 @@ from guilda.base import ComponentEmpty
 
 from guilda.utils.calc import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
+from guilda.utils.runtime import suppress_stdout
 from guilda.utils.typing import ComplexArray, FloatArray
 
 from assimulo.problem import Implicit_Problem
@@ -89,6 +90,10 @@ def simulate(
         options = SimulationOptions()
 
     options.set_parameter_from_pn(self)
+    
+    # build bus list
+    bus_index_map = self.bus_index_map
+    bus = [self.a_bus_dict[i] for i in bus_index_map]
 
     # process u and index of u
 
@@ -97,7 +102,7 @@ def simulate(
 
     t_list = list(t)
     n_t = len(t_list)
-    n_u = np.sum([x.nu for x in self.a_bus])
+    n_u = np.sum([x.nu for x in bus])
 
     if u is None:
         u = np.zeros((n_u, n_t))
@@ -106,13 +111,13 @@ def simulate(
         raise TypeError(
             f'u must be 2-dimensional array of shape {(n_u, n_t)}, but got {u.shape}.')
 
-    bus = self.a_bus
     controllers_global = self.a_controller_global
     controllers = self.a_controller_local
     Y = self.get_admittance_matrix()
 
     out = solve_odes(
         bus,
+        bus_index_map,
         controllers_global,
         controllers,
         Y,
@@ -134,6 +139,7 @@ def simulate(
 
 def solve_odes(
     buses: List[Bus],
+    bus_index_map: Dict[Hashable, int],
     ctrls_global: List[Controller],
     ctrls: List[Controller],
     system_admittance: ComplexArray,
@@ -164,6 +170,20 @@ def solve_odes(
     t_cand = sorted(list(set(
         np.array(fault_times).flatten().tolist() + t
     )))
+    
+    # build controller index map
+    ctrls_global_indices = [
+        (
+            [bus_index_map[x] for x in c.index_observe],
+            [bus_index_map[x] for x in c.index_input]
+        ) for c in ctrls_global
+    ]
+    ctrls_indices = [
+        (
+            [bus_index_map[x] for x in c.index_observe],
+            [bus_index_map[x] for x in c.index_input]
+        ) for c in ctrls
+    ]
 
     # :27
 
@@ -175,13 +195,12 @@ def solve_odes(
     idx_empty_buses = [i for i, b in enumerate(
         buses) if isinstance(b.component, ComponentEmpty)]
 
-    _idx_controlled_buses = [
-        c.index_observe + c.index_input
-        for c in ctrls + ctrls_global
-    ]
-    idx_controlled_buses: List[int] = sorted(
-        list(set(reduce(lambda x, y: [*x, *y], _idx_controlled_buses)))
-    ) if _idx_controlled_buses else []
+    idx_controlled_buses: List[int] = sorted(list(set(reduce(
+        lambda x, y: x + y[0] + y[1], 
+        ctrls_global_indices + ctrls_indices,
+        []
+    ))))
+    
     # idx_controlled_buses: unique pairs of observe-input indices
 
     system_admittance_float = complex_mat_to_float(system_admittance)
@@ -281,7 +300,8 @@ def solve_odes(
 
             dx, con = get_dx_con(
                 linear,
-                buses, ctrls_global, ctrls, Ymat,
+                buses, ctrls_global, ctrls, ctrls_global_indices, ctrls_indices, 
+                Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
                 t, x.reshape(
                     (-1, 1)), u(t), u_indices, cur_fault_buses, cur_sim_buses
@@ -324,13 +344,22 @@ def solve_odes(
 
         model = Implicit_Problem(func, x_0, dx_0, tstart)
         sim = IDA(model)
+        
         sim.rtol = options.rtol
         sim.atol = options.atol
 
         sim.algvar = [True] * nx + [False] * nVI
-        xxx = sim.make_consistent('IDA_YA_YDP_INIT')
-        t_sol, y_orig, dy = sim.simulate(tend)
+        sim.make_consistent('IDA_YA_YDP_INIT')
+        sim.display_progress = False # this one is useless, dunno if it is buggy of my fault
+        
+        @suppress_stdout
+        def s():
+            return sim.simulate(tend)
+        
+        t_sol, y_orig, dy = s()
         y = y_orig.T
+        
+        
         # :143~148
 
         X = y[:nx, :].T

@@ -5,7 +5,7 @@ from scipy.optimize import root
 from scipy.linalg import block_diag
 
 
-from typing import Tuple, List, Optional, Callable
+from typing import Tuple, List, Optional, Callable, Dict, Hashable, Iterable
 
 from guilda.bus import Bus
 from guilda.branch import Branch
@@ -63,54 +63,95 @@ class _PowerNetwork(object):
 
     def __init__(self):
 
-        self.a_bus: List[Bus] = []
+        self.a_bus_dict: Dict[Hashable, Bus] = {}
+        self.bus_indices_cache: Optional[List[Hashable]] = None
+        self.bus_index_map_cache: Optional[Dict[Hashable, int]] = None
+        
         self.a_branch: List[Branch] = []
         self.a_controller_local: List[Controller] = []
         self.a_controller_global: List[Controller] = []
 
     @property
     def x_equilibrium(self) -> List[FloatArray]:
-        return [b.component.x_equilibrium for b in self.a_bus]
+        return [b.component.x_equilibrium for b in self.a_bus_dict.values()]
 
     @property
     def V_equilibrium(self) -> List[complex]:
-        return [b.V_equilibrium or 0 for b in self.a_bus]
+        return [b.V_equilibrium or 0 for b in self.a_bus_dict.values()]
 
     @property
     def I_equilibrium(self) -> List[complex]:
-        return [b.I_equilibrium or 0 for b in self.a_bus]
+        return [b.I_equilibrium or 0 for b in self.a_bus_dict.values()]
 
-    def add_bus(self, *bus: Bus):
-        self.a_bus.extend(bus)
+    def add_bus(self, *buses: Bus):
+        '''
+        Add buses and allocate indices for those unassigned.
+        '''
+        for bus in buses:
+            if bus.index is None:
+                new_index = len(self.a_bus_dict) + 1
+                while new_index in self.a_bus_dict:
+                    new_index += 1
+                bus.index = new_index
+            if bus.index in self.a_bus_dict:
+                raise RuntimeError(f'Bus of index {bus.index} already exists.')
+            self.a_bus_dict[bus.index] = bus
+            self.bus_index_map_cache = None
+            self.bus_indices_cache = None
 
     def add_branch(self, *branch: Branch):
         self.a_branch.extend(branch)
         
+    @property
+    def a_bus(self):
+        return self.a_bus_dict.values()
+        
+    @property
+    def bus_indices(self):
+        if self.bus_indices_cache is None:
+            self.bus_indices_cache = list(self.a_bus_dict.keys())
+        return self.bus_indices_cache
     
+    @property
+    def bus_index_map(self):
+        if self.bus_index_map_cache is None:
+            m = {}
+            for i in self.bus_indices:
+                m[i] = len(m)
+            self.bus_index_map_cache = m
+        return self.bus_index_map_cache
+    
+    
+    def sort_buses(self):
+        sorted_buses = dict(sorted(self.a_bus_dict.items(), key=lambda item: item[1])) # type: ignore
+        self.a_bus_dict = sorted_buses
+        
 
-    def get_admittance_matrix(self, a_index_bus: Optional[List[int]] = None) -> ComplexArray:
-        if not a_index_bus:
-            a_index_bus = list(range(len(self.a_bus)))
+    def get_admittance_matrix(self, bus_index_map: Optional[Dict[Hashable, int]] = None) -> ComplexArray:
+        if not bus_index_map:
+            bus_index_map = self.bus_index_map
 
-        n: int = len(self.a_bus)
+        n: int = len(bus_index_map)
         Y: ComplexArray = np.zeros((n, n), dtype=complex)
 
         for br in self.a_branch:
-            if (br.from_-1 in a_index_bus) and (br.to-1 in a_index_bus):
+            if (br.bus1 in bus_index_map) and (br.bus2 in bus_index_map):
                 Y_sub = br.get_admittance_matrix()
-                f, t = br.from_-1, br.to-1
+                f = bus_index_map[br.bus1]
+                t = bus_index_map[br.bus2]
                 Y[f:f+1, f:f+1] += Y_sub[:1, :1]
                 Y[f:f+1, t:t+1] += Y_sub[:1, 1:]
                 Y[t:t+1, f:f+1] += Y_sub[1:, :1]
                 Y[t:t+1, t:t+1] += Y_sub[1:, 1:]
 
-        for idx in a_index_bus:
-            Y[idx, idx] += self.a_bus[idx].shunt
+        for idx in bus_index_map:
+            _idx = bus_index_map[idx]
+            Y[_idx, _idx] += self.a_bus_dict[idx].shunt
 
         return Y
 
     def calculate_power_flow(self) -> Tuple[ComplexArray, ComplexArray]:
-        n: int = len(self.a_bus)
+        n: int = len(self.a_bus_dict)
 
         def func_eq(Y: ComplexArray, x: FloatArray):
             Vr = x[0::2]
@@ -123,8 +164,8 @@ class _PowerNetwork(object):
             Q = PQhat.imag
 
             out = np.zeros((n * 2, 1))
-            for i in range(n):
-                bus = self.a_bus[i]
+            for index, i in self.bus_index_map.items():
+                bus = self.a_bus_dict[index]
                 out_i = bus.get_constraint(V[i].real, V[i].imag, P[i], Q[i])
                 out[i * 2: i * 2 + 2, :] = out_i
             return out.flatten()
@@ -142,23 +183,27 @@ class _PowerNetwork(object):
         Ians = Y @ Vans
         return Vans, Ians
 
-    def set_equilibrium(self, V: ComplexArray, I: ComplexArray):
-        for idx in range(len(self.a_bus)):
-            self.a_bus[idx].set_equilibrium(V[idx][0], I[idx][0])
+    def set_equilibrium(self, V: ComplexArray, I: ComplexArray, bus_index_map: Optional[Dict[Hashable, int]] = None):
+        if bus_index_map is None:
+            bus_index_map = self.bus_index_map
+        for index, i in bus_index_map.items():
+            self.a_bus_dict[index].set_equilibrium(V[i][0], I[i][0])
 
     def initialize(self):
         V, I = self.calculate_power_flow()
         self.set_equilibrium(V, I)
 
     def get_sys(self):
+        
         # A, B, C, D, BV, DV, BI, DI, R, S
-        mats = [[] for _ in range(10)]
-        for b in self.a_bus:
+        mats = [[np.zeros((0, 0))] * len(self.a_bus_dict) for _ in range(10)]
+        for index, i in self.bus_index_map.items():
+            b = self.a_bus_dict[index]
             mat = b.component.get_linear_matrix().as_tuple()
-            for i in range(len(mats)):
-                if mat[i].shape == (0, 0):
-                    continue
-                mats[i].append(mat[i])
+            for mi in range(len(mats)):
+                # if mat[mi].shape == (0, 0):
+                #     continue
+                mats[mi][i] = mat[mi]
         [A, B, C, D, BV, DV, BI, DI, R, S] = list(
             map(lambda mat: block_diag(*mat), mats))
         nI = C.shape[0]

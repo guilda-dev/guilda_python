@@ -17,9 +17,8 @@ def simple_3_bus():
     net.add_bus(BusPQ(-3, 0, 0))
     net.add_bus(BusPV(0.5, 2, 0))
 
-    net.a_bus[0].set_component(LoadCurrent())
-    net.a_bus[1].set_component(LoadCurrent())
-    net.a_bus[2].set_component(LoadCurrent())
+    for b in net.a_bus:
+        b.set_component(LoadCurrent())
 
     net.add_branch(BranchPi(1, 2, 1/y12, 0))
     net.add_branch(BranchPi(2, 3, 1/y23, 0))
@@ -56,8 +55,8 @@ def simple_3_bus_nishino():
     
     component3 = LoadImpedance()
 
-    net.a_bus[0].set_component(component1)
-    net.a_bus[1].set_component(component2)
-    net.a_bus[2].set_component(component3)
+    net.a_bus_dict[1].set_component(component1)
+    net.a_bus_dict[2].set_component(component2)
+    net.a_bus_dict[3].set_component(component3)
     
     return net

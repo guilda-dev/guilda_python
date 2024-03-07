@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple, List
+from typing import Tuple, List, Hashable
 from abc import ABC, abstractmethod as AM
 
 from guilda.utils.typing import FloatArray
@@ -14,9 +14,9 @@ class Controller(ABC):
         _type_: _description_
     '''
     
-    def __init__(self, index_input: List[int], index_observe: List[int]):
-        self.index_input: List[int] = index_input  
-        self.index_observe: List[int] = index_observe 
+    def __init__(self, index_input: List[Hashable], index_observe: List[Hashable]):
+        self.index_input: List[Hashable] = index_input  
+        self.index_observe: List[Hashable] = index_observe 
 
     @property
     @AM

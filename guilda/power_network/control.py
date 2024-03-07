@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Hashable, Tuple
 import numpy as np
 
 from guilda.bus import Bus
@@ -11,8 +11,11 @@ def get_dx_con(
     linear: bool,
 
     buses: List[Bus],
+    
     ctrls_global: List[Controller],
     ctrls: List[Controller],
+    ctrls_global_indices: List[Tuple[List[int], List[int]]],
+    ctrls_indices: List[Tuple[List[int], List[int]]],
 
     reduced_admittance: FloatArray,
 
@@ -82,16 +85,17 @@ def get_dx_con(
     dx_ctrls_global = [np.zeros((0, 0))] * len(ctrls_global)
 
     for i, c in enumerate(ctrls_global):
+        i_observe, i_input = ctrls_global_indices[i]
         # pass data
         f = c.get_dx_u_func(linear)
         dx_ctrls_global[i], u_ctrl_global = f(
-            t, x_ctrls_global[i], [x_buses[i] for i in c.index_observe],
-            V_all[:, c.index_observe], I_all[:, c.index_observe], [])
+            t, x_ctrls_global[i], [x_buses[i] for i in i_observe],
+            V_all[:, i_observe], I_all[:, i_input], [])
 
         idx = 0
-        for i_input in c.index_input:
-            u_global[i_input] = u_ctrl_global[idx: idx + nu_bus[i_input]]
-            idx = idx + nu_bus[i_input]
+        for i_input2 in i_input:
+            u_global[i_input2] = u_ctrl_global[idx: idx + nu_bus[i_input2]]
+            idx = idx + nu_bus[i_input2]
 
     # apply inputs from global controllers
     for i, u_ctrl_g in u_global:
@@ -103,16 +107,17 @@ def get_dx_con(
     dx_ctrls = [np.zeros((0, 0))] * len(ctrls)
 
     for i, c in enumerate(ctrls):
+        i_observe, i_input = ctrls_global_indices[i]
         f = c.get_dx_u_func(linear)
         dx_ctrls[i], u_ctrl = f(
-            t, x_ctrls[i], [x_buses[i] for i in c.index_observe],
-            V_all[:, c.index_observe], I_all[:, c.index_observe],
-            [u_buses[i] for i in c.index_observe])
+            t, x_ctrls[i], [x_buses[i] for i in i_observe],
+            V_all[:, i_observe], I_all[:, i_observe],
+            [u_buses[i] for i in i_observe])
 
         idx = 0
-        for i_input in c.index_input:
-            u_local[i_input] = u_ctrl[idx: idx + nu_bus[i_input]]
-            idx = idx + nu_bus[i_input]
+        for i_input2 in i_input:
+            u_local[i_input2] = u_ctrl[idx: idx + nu_bus[i_input2]]
+            idx = idx + nu_bus[i_input2]
             
     # apply inputs from local controllers
     for i, u_ctrl_l in u_local:

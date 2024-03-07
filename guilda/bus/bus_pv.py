@@ -1,11 +1,13 @@
+from typing import Hashable
+
 import numpy as np
 from numpy.linalg import norm
 
 from guilda.bus.bus import Bus
 
 class BusPV(Bus):
-    def __init__(self, P: float, Vabs: float, shunt: complex):
-        super().__init__(shunt)
+    def __init__(self, P: float, Vabs: float, shunt: complex, index: Hashable = None):
+        super().__init__(shunt, index=index)
         self.P: float = P
         self.Vabs: float = Vabs
 

@@ -1,3 +1,4 @@
+from typing import Hashable
 import numpy as np
 
 from guilda.bus.bus import Bus
@@ -5,8 +6,8 @@ from guilda.bus.bus import Bus
 
 
 class BusPQ(Bus):
-    def __init__(self, P: float, Q: float, shunt: complex):
-        super().__init__(shunt)
+    def __init__(self, P: float, Q: float, shunt: complex, index: Hashable = None):
+        super().__init__(shunt, index=index)
         self.P: float = P
         self.Q: float = Q
 
