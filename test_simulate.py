@@ -5,9 +5,11 @@ import guilda.models as sample
 
 import matplotlib.pyplot as plt
 
+from guilda.power_network.types import BusInput, SimulationScenario
+
 
 np.set_printoptions(
-    precision=6, 
+    precision=6,
     suppress=True,
 )
 
@@ -21,18 +23,31 @@ V, I = net.calculate_power_flow()
 
 net.print_bus_state()
 
+scenario = SimulationScenario(
+    u=[
+        BusInput(
+            index=3,
+            time=[0, 10, 20, 60],
+            value=np.array([
+                [0, 0.05, 0.1, 0.1],
+                [0,    0,   0,   0],
+            ]),
+        )
+    ]
+)
+
 options = SimulationOptions(
     linear=False,
 )
 options.set_parameter_from_pn(net)
 
 result = net.simulate(
-    (0, 10, 20, 60), 
+    (0, 10, 20, 60),
     np.array([
         [0, 0.05, 0.1, 0.1],
         [0,    0,   0,   0],
-    ]), 
-    [2], 
+    ]),
+    [2],
     options
 )
 
