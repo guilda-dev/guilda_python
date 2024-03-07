@@ -1,15 +1,54 @@
 
 from dataclasses import dataclass, field
-from typing import List, Tuple, Union, Literal, Any
+from typing import List, Tuple, Union, Literal, Any, Dict, Hashable, Callable, Iterable
 import numpy as np
 
 from guilda.power_network.base import _PowerNetwork
-from guilda.utils.typing import FloatArray
+from guilda.utils.typing import FloatArray, ComplexArray
+
+
+@dataclass
+class BusInput:
+    
+    index: Hashable = None
+    time: Iterable[float] = field(default_factory=list)
+    type: Literal['zoh'] | Literal['foh'] | Literal['func'] = 'zoh'
+    value: Iterable[FloatArray] | Callable[[float], FloatArray] = field(default_factory=list)
+    
+@dataclass
+class BusFault:
+    
+    index: Hashable = None
+    time: Tuple[float, float] = (0, 0)
+    
+@dataclass
+class BusConnect:
+    
+    index: Hashable = None
+    time: float = 0
+    disconnect: bool = False
+
+@dataclass
+class SimulationScenario:
+    
+    V_init: Dict[Hashable, complex] = field(default_factory=dict)
+    I_init: Dict[Hashable, complex] = field(default_factory=dict)
+    
+    x_init_sys: Dict[Hashable, FloatArray] = field(default_factory=dict)
+    x_init_ctrl_global: Dict[Hashable, FloatArray] = field(default_factory=dict)
+    x_init_ctrl: Dict[Hashable, FloatArray] = field(default_factory=dict)
+    
+    u: Iterable[BusInput] = field(default_factory=list)
+    fault: Iterable[BusFault] = field(default_factory=list)
+    conn: Iterable[BusConnect] = field(default_factory=list)
+    
+
 
 @dataclass
 class SimulationOptions:
     
     linear: bool = False
+    
     fault: List[Tuple[Tuple[float, float], List[int]]] = field(default_factory = list)
     
     x0_sys: List[FloatArray] = field(default_factory = list)
@@ -20,6 +59,7 @@ class SimulationOptions:
     x0_con_global: List[FloatArray] = field(default_factory = list)
     
     method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
+    
     solver_method: str = 'ida'
     
     atol: float = 1e-8
@@ -50,10 +90,10 @@ class SimulationSegment:
     time_start: float = 0
     time_end: float = 0
     
-    simulated_bus: List[int] = field(default_factory=list)
-    fault_bus: List[int] = field(default_factory=list)
+    simulated_buses: List[int] = field(default_factory=list)
+    fault_buses: List[int] = field(default_factory=list)
     
-    impedance_matrix: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
+    admittance: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
     
     solution: Any = None
     

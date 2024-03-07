@@ -9,119 +9,152 @@ from guilda.utils.typing import FloatArray
 
 def get_dx_con(
     linear: bool,
-    bus: List[Bus],
-    controllers_global: List[Controller],
-    controllers: List[Controller],
-    Ymat: FloatArray,
+
+    buses: List[Bus],
+    ctrls_global: List[Controller],
+    ctrls: List[Controller],
+
+    reduced_admittance: FloatArray,
+
     nx_bus: List[int],
-    nx_controller_global: List[int],
-    nx_controller: List[int],
+    nx_ctrl_global: List[int],
+    nx_ctrl: List[int],
     nu_bus: List[int],
+
     t: float,
-    x_all: FloatArray,
-    u: FloatArray,
-    idx_u: List[int],
-    idx_fault: List[int],
-        simulated_bus: List[int]):
+    xVI_all: FloatArray,
+    u_all: FloatArray,
+    u_indices: List[int],  # only these inputs are not 0
 
-    n1 = np.sum([nx_bus[b] for b in simulated_bus], dtype=int)
-    n2 = np.sum(nx_controller_global, dtype=int)
-    n3 = np.sum(nx_controller, dtype=int)
+    fault_buses: List[int],
+    simulated_buses: List[int],
+):
 
-    n4 = 2 * len(simulated_bus)
-    n5 = 2 * len(idx_fault)
+    # separate x, V, I
+    
+    n1 = np.sum([nx_bus[b] for b in simulated_buses], dtype=int)
+    n2 = np.sum(nx_ctrl_global, dtype=int)
+    n3 = np.sum(nx_ctrl, dtype=int)
 
-    x = x_all[0: n1]
-    xkg = x_all[n1: n1 + n2]
-    xk = x_all[n1 + n2: n1 + n2 + n3]
+    n_v_sim_buses = 2 * len(simulated_buses)
+    n_i_fault_buses = 2 * len(fault_buses)
 
-    ns = n1 + n2 + n3
-    V0 = x_all[ns: ns + n4]
-    V = np.reshape(V0, (-1, 2)).T
-    I_fault = np.reshape(x_all[ns + n4: ns + n4 + n5], (-1, 2)).T
+    x = xVI_all[0: n1]
+    xkg = xVI_all[n1: n1 + n2]
+    xk = xVI_all[n1 + n2: n1 + n2 + n3]
 
-    I = np.reshape(Ymat @ V0, (-1, 2)).T
-    I[:, idx_fault] = I_fault
+    nx_buses_and_ctrls = n1 + n2 + n3
+    
+    V_flattened = xVI_all[nx_buses_and_ctrls: nx_buses_and_ctrls + n_v_sim_buses]
+    
+    V_arr = np.reshape(V_flattened, (-1, 2)).T # each row is [real, imag]
+    
+    I_fault_arr = np.reshape(
+        xVI_all[nx_buses_and_ctrls + n_v_sim_buses: nx_buses_and_ctrls + n_v_sim_buses + n_i_fault_buses], 
+        (-1, 2)
+    ).T
 
-    Vall = np.zeros((2, len(bus)))
-    Iall = np.zeros((2, len(bus)))
+    I_flattened = np.reshape(reduced_admittance @ V_flattened, (-1, 2)).T # each row is [real, imag]
+    I_flattened[:, fault_buses] = I_fault_arr
 
-    Vall[:, simulated_bus] = V
-    Iall[:, simulated_bus] = I
+    V_all = np.zeros((2, len(buses)))
+    I_all = np.zeros((2, len(buses)))
 
-    #
+    V_all[:, simulated_buses] = V_arr
+    I_all[:, simulated_buses] = I_flattened
 
-    x_bus = sep_col_vec(x, [nx_bus[b] for b in simulated_bus])
+    # split bus and controller states
 
-    U_bus = [np.zeros((0, 0))] * len(bus)
-    for b in simulated_bus:
-        U_bus[b] = np.zeros((nu_bus[b], 1))
+    x_buses = sep_col_vec(x, [nx_bus[b] for b in simulated_buses])
 
-    xkg_cell = sep_col_vec(xkg, nx_controller_global)
-    xk_cell = sep_col_vec(xk, nx_controller)
+    x_ctrls_global = sep_col_vec(xkg, nx_ctrl_global)
+    x_ctrls = sep_col_vec(xk, nx_ctrl)
+    
+    # calculate inputs
+    
+    u_buses = [np.zeros((0, 1))] * len(buses)
+    for b in simulated_buses:
+        u_buses[b] = np.zeros((nu_bus[b], 1))
 
-    #
+    # calculate dx of global controllers
 
-    dxkg = [np.zeros((0, 0))] * len(controllers_global)
+    u_global = dict()
+    dx_ctrls_global = [np.zeros((0, 0))] * len(ctrls_global)
 
-    for i, c in enumerate(controllers_global):
+    for i, c in enumerate(ctrls_global):
+        # pass data
         f = c.get_dx_u_func(linear)
-        dxkg[i], ug_ = f(
-            t, xkg_cell[i], [x_bus[i] for i in c.index_observe],
-            Vall[:, c.index_observe], Iall[:, c.index_observe], [])
+        dx_ctrls_global[i], u_ctrl_global = f(
+            t, x_ctrls_global[i], [x_buses[i] for i in c.index_observe],
+            V_all[:, c.index_observe], I_all[:, c.index_observe], [])
 
         idx = 0
-        for i_input in np.array(c.index_input, dtype=int).flatten():
-            U_bus[i_input] += ug_[idx: idx + nu_bus[i_input]]
+        for i_input in c.index_input:
+            u_global[i_input] = u_ctrl_global[idx: idx + nu_bus[i_input]]
             idx = idx + nu_bus[i_input]
 
-    #
-    U_global = list(U_bus)
+    # apply inputs from global controllers
+    for i, u_ctrl_g in u_global:
+        u_buses[i] += u_ctrl_g
 
-    dxk = [np.zeros((0, 0))] * len(controllers)
+    # calculate dx of local controllers
+    
+    u_local = dict()
+    dx_ctrls = [np.zeros((0, 0))] * len(ctrls)
 
-    for i, c in enumerate(controllers):
+    for i, c in enumerate(ctrls):
         f = c.get_dx_u_func(linear)
-        dxk[i], u_ = f(
-            t, xk_cell[i], [x_bus[i] for i in c.index_observe],
-            Vall[:, c.index_observe], Iall[:, c.index_observe],
-            [U_global[i] for i in c.index_observe])
+        dx_ctrls[i], u_ctrl = f(
+            t, x_ctrls[i], [x_buses[i] for i in c.index_observe],
+            V_all[:, c.index_observe], I_all[:, c.index_observe],
+            [u_buses[i] for i in c.index_observe])
 
         idx = 0
-        for i_input in np.array(c.index_input, dtype=int).flatten():
-            U_bus[i_input] += u_[idx: idx + nu_bus[i_input]]
+        for i_input in c.index_input:
+            u_local[i_input] = u_ctrl[idx: idx + nu_bus[i_input]]
             idx = idx + nu_bus[i_input]
-
+            
+    # apply inputs from local controllers
+    for i, u_ctrl_l in u_local:
+        u_buses[i] += u_ctrl_l
+        
+    
+    # apply inputs from simulation scenario
     idx = 0
-    for i in idx_u:
-        U_bus[i] += u[idx:idx+nu_bus[i]]
+    for i in u_indices:
+        u_buses[i] += u_all[idx:idx+nu_bus[i]]
         idx += nu_bus[i]
-
+        
+        
+    # calculate DAE residues of network components
+        
     dx_component: List[FloatArray] = []
-    constraint: List[FloatArray] = []
+    constraint_component: List[FloatArray] = []
 
-    for idx in simulated_bus:
-        f = bus[idx].component.get_dx_con_func(linear)
-        v = Vall[0, idx] + 1j * Vall[1, idx]
-        i = Iall[0, idx] + 1j * Iall[1, idx]
+    for idx in simulated_buses:
+        f = buses[idx].component.get_dx_con_func(linear)
+        v = V_all[0, idx] + 1j * V_all[1, idx]
+        i = I_all[0, idx] + 1j * I_all[1, idx]
         dx_i, cs_i = f(
             v,
             i,
-            x_bus[idx],
-            U_bus[idx],
+            x_buses[idx],
+            u_buses[idx],
             t,
         )
         dx_component.append(dx_i)
-        constraint.append(cs_i)
+        constraint_component.append(cs_i)
 
-    dx_algebraic = np.vstack([
-        *constraint,
-        np.reshape(Vall[:, idx_fault], (-1, 1))
+    # concatenate results
+
+    algebraic_constraint = np.vstack([
+        *constraint_component,
+        np.reshape(V_all[:, fault_buses], (-1, 1))
     ])
     dx = np.vstack([
         *dx_component,
-        *dxkg,
-        *dxk,
+        *dx_ctrls_global,
+        *dx_ctrls,
     ])
 
-    return dx, dx_algebraic
+    return dx, algebraic_constraint

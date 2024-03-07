@@ -7,6 +7,8 @@ from functools import reduce
 from typing import Tuple, List, Callable, Optional, Iterable
 
 from tqdm import tqdm
+from guilda.bus.bus import Bus
+from guilda.controller.controller import Controller
 
 from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
 
@@ -19,8 +21,8 @@ from guilda.utils.calc import complex_mat_to_float
 from guilda.utils.data import complex_arr_to_col_vec
 from guilda.utils.typing import ComplexArray, FloatArray
 
-from scikits.odes.dae import dae
-
+from assimulo.problem import Implicit_Problem
+from assimulo.solvers import IDA
 
 def get_t_simulated(
     t_cand: List[float], 
@@ -101,9 +103,19 @@ def simulate(
 
     if u is None or len(u.shape) != 2:
         raise TypeError(f'u must be 2-dimensional array of shape {(n_u, n_t)}, but got {u.shape}.')
+    
+    
+
+    bus = self.a_bus
+    controllers_global = self.a_controller_global
+    controllers = self.a_controller_local
+    Y = self.get_admittance_matrix()
 
     out = solve_odes(
-        self, 
+        bus,
+        controllers_global,
+        controllers,
+        Y, 
         t_list, 
         u, 
         idx_u if isinstance(idx_u, list) else list(idx_u),
@@ -120,53 +132,58 @@ def simulate(
     return out
 
 def solve_odes(
-    self: _PowerNetwork, 
+    buses: List[Bus],
+    ctrls_global: List[Controller],
+    ctrls: List[Controller],
+    system_admittance: ComplexArray,
+    
     t: List[float], 
     u: FloatArray, # (n_u, n_t)
-    idx_u: List[int],
+    u_indices: List[int],
     fault: List[Tuple[Tuple[float, float], List[int]]], 
-    x_in: List[FloatArray], 
-    xkg: List[FloatArray],
-    xk: List[FloatArray],
-    V0_in: List[complex], 
-    I0_in: List[complex], 
+    
+    x_init_bus: List[FloatArray], 
+    x_init_kg: List[FloatArray],
+    x_init_k: List[FloatArray],
+    V_init: List[complex], 
+    I_init: List[complex], 
+    
     linear: bool, 
-    options: SimulationOptions):
+    options: SimulationOptions # only used for initializing solver
+    ):
 
     # transform input data
 
-    bus = self.a_bus
-    controllers_global = self.a_controller_global
-    controllers = self.a_controller_local
-
-    fault_time: List[Tuple[float, float]] = [x[0] for x in fault]
-    idx_fault: List[List[int]] = [x[1] for x in fault]
+    fault_times: List[Tuple[float, float]] = [x[0] for x in fault]
+    fault_indices: List[List[int]] = [x[1] for x in fault]
 
     uf = _sample2f(t, u)
-    fault_f = _idx2f(fault_time, idx_fault)
+    fault_f = _idx2f(fault_times, fault_indices)
 
     t_cand = sorted(list(set(
-        np.array(fault_time).flatten().tolist() + t
+        np.array(fault_times).flatten().tolist() + t
     )))
 
 
     # :27
 
-    nx_bus = [b.nx for b in bus]
-    nu_bus = [b.nu for b in bus]
-    nx_kg = [c.nx for c in controllers_global]
-    nx_k = [c.nx for c in controllers]
+    nx_bus = [b.nx for b in buses]
+    nu_bus = [b.nu for b in buses]
+    nx_kg = [c.nx for c in ctrls_global]
+    nx_k = [c.nx for c in ctrls]
 
-    idx_non_unit = [i for i, b in enumerate(bus) if isinstance(b.component, ComponentEmpty)]
-    _idx_controller = [
+    idx_empty_buses = [i for i, b in enumerate(buses) if isinstance(b.component, ComponentEmpty)]
+    
+    _idx_controlled_buses = [
         c.index_observe + c.index_input
-        for c in controllers + controllers_global
+        for c in ctrls + ctrls_global
     ]
-    idx_controller: List[int] = sorted(list(set(reduce(lambda x, y: [*x, *y], _idx_controller)))) if _idx_controller else [] 
-    # idx_controller: unique pairs of observe-input indices
+    idx_controlled_buses: List[int] = sorted(
+        list(set(reduce(lambda x, y: [*x, *y], _idx_controlled_buses)))
+    ) if _idx_controlled_buses else [] 
+    # idx_controlled_buses: unique pairs of observe-input indices
 
-    Y = self.get_admittance_matrix()
-    Ymat_all = complex_mat_to_float(Y)
+    system_admittance_float = complex_mat_to_float(system_admittance)
 
     t_simulated = t_cand
     if options.method.lower() == 'zoh':
@@ -180,9 +197,9 @@ def solve_odes(
 
     # initial condition
 
-    x_k: FloatArray = np.vstack(x_in + xkg + xk)
-    V_k: FloatArray = complex_arr_to_col_vec(np.array(V0_in))
-    I_k: FloatArray = complex_arr_to_col_vec(np.array(I0_in))
+    x_k: FloatArray = np.vstack(x_init_bus + x_init_kg + x_init_k)
+    V_k: FloatArray = complex_arr_to_col_vec(np.array(V_init))
+    I_k: FloatArray = complex_arr_to_col_vec(np.array(I_init))
 
     # shape etc.
 
@@ -203,41 +220,44 @@ def solve_odes(
 
         tstart, tend = t_simulated[i: i + 2]
 
-        f_ = fault_f((tstart + tend) / 2)
+        cur_fault_buses = fault_f((tstart + tend) / 2)
 
-        except_ = set(list(f_) + idx_controller)
-        simulated_bus = sorted(set(range(len(bus))) - (set(idx_non_unit) - except_))
+        must_include_buses = set(list(cur_fault_buses) + idx_controlled_buses)
+        
+        # (all buses that are empty but neither faulted nor controlled) are excluded
+        # TODO assume that this step is only for the reduction of computation...
+        cur_sim_buses = sorted(set(range(len(buses))) - (set(idx_empty_buses) - must_include_buses))
+        
         _, Ymat, __, Ymat_reproduce \
-            = reduce_admittance_matrix(Y, simulated_bus)
+            = reduce_admittance_matrix(system_admittance, cur_sim_buses)
 
         meta = SimulationSegment(
             time_start = tstart, 
             time_end = tend, 
-            simulated_bus = simulated_bus, 
-            fault_bus = f_, 
-            impedance_matrix = Ymat_reproduce,
+            simulated_buses = cur_sim_buses, 
+            fault_buses = cur_fault_buses, 
+            admittance = Ymat_reproduce,
         )
 
-        idx_simulated_bus: List[int] = [2 * x for x in simulated_bus] + [2 * x + 1 for x in simulated_bus]
-        idx_fault_bus: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in f_] + [[]])
+        idx_sim_buses: List[int] = [2 * x for x in cur_sim_buses] + [2 * x + 1 for x in cur_sim_buses]
+        idx_fault_buses: List[int] = reduce(lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in cur_fault_buses] + [[]])
 
 
-        # TODO check the following:
         # x_k: the states of all buses
         # V_k, I_k: the states of needed buses only
-        x = np.vstack([x_k, V_k[idx_simulated_bus], I_k[idx_fault_bus]])
+        x_dae = np.vstack([x_k, V_k[idx_sim_buses], I_k[idx_fault_buses]])
 
 
         # :128
-        nVI = x.size - nx
-        nI = len(f_) * 2
+        nVI = x_dae.size - nx
+        nI = len(cur_fault_buses) * 2
         nV = nVI - nI
 
         if i == 0:
             # add initial value records
-            _X = x[:nx, :].T
-            _V = x[nx: nx + nV, :].T @ Ymat_reproduce.T
-            _I = _V @ Ymat_all.T
+            _X = x_dae[:nx, :].T
+            _V = x_dae[nx: nx + nV, :].T @ Ymat_reproduce.T
+            _I = _V @ system_admittance_float.T
             sols.append((
                 np.array([tstart]), 
                 # x,
@@ -255,75 +275,84 @@ def solve_odes(
             x: FloatArray, 
             u: Callable[[float], FloatArray],
             xdot: FloatArray,
-            res: FloatArray,
+            # res: FloatArray,
         ):
 
             dx, con = get_dx_con(
                 linear,
-                bus, controllers_global, controllers, Ymat,
+                buses, ctrls_global, ctrls, Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
-                t, x.reshape((-1, 1)), u(t), idx_u, f_, simulated_bus
+                t, x.reshape((-1, 1)), u(t), u_indices, cur_fault_buses, cur_sim_buses
             )
             
             n = dx.size
-            res[:n] = dx.flatten() - xdot[:n]
-            res[n:] = con.flatten()
+            # res[:n] = dx.flatten() - xdot[:n]
+            # res[n:] = con.flatten()
             
             pbar_val = (t - ti) / (tf - ti)
             pbar.update(pbar_val - pbar.n)
             
+            ret = np.concatenate([dx.flatten() - xdot[:n], con.flatten()])
+            return ret
             # TODO add reporter?
 
 
         # interpolate input
         if options.method.lower() == 'zoh':
             u_ = uf((tstart + tend) / 2)
-            func = lambda t, x, dx, res: func_(t, x, lambda _: u_, dx, res)
+            func = lambda t, x, dx: func_(t, x, lambda _: u_, dx)
         else:
             us_ = uf(tstart)
             ue_ = uf(tend)
             u__ = lambda t: (ue_ * (t - tstart) + us_ * (tend - t)) / (tend - tstart)
-            func = lambda t, x, dx, res: func_(t, x, u__, dx, res)
-
+            func = lambda t, x, dx: func_(t, x, u__, dx)
 
 
         # :138
 
-        solver = dae(
-            options.solver_method, func,
-            compute_initcond='yp0', first_step_size=1e-18,
-            atol=options.atol, rtol=options.rtol,
-            algebraic_vars_idx=list(range(nx, x.size)),
-        )
+        # solver = dae(
+        #     options.solver_method, func,
+        #     compute_initcond='yp0', first_step_size=1e-18,
+        #     atol=options.atol, rtol=options.rtol,
+        #     algebraic_vars_idx=list(range(nx, x_dae.size)),
+        # )
+        
 
-        x_0 = x.flatten()
+        x_0 = x_dae.flatten()
         dx_0 = x_0 * 0 # this will be computed by the solver
-        sol = solver.solve(t_simulated[i: i + 2],x_0, dx_0)
-
+        
+        model = Implicit_Problem(func, x_0, dx_0, tstart)
+        sim = IDA(model)
+        sim.rtol = options.rtol
+        sim.atol = options.atol
+        
+        sim.algvar = [True] * x_k.size + [False] * (x_dae.size - x_k.size)
+        xxx = sim.make_consistent('IDA_YA_YDP_INIT')
+        t_sol, y_orig, dy = sim.simulate(tend) 
+        y = y_orig.T
         # :143~148
 
-        y = sol.values.y.T[:, 1:] # get the end solution
-        V = y[nx: nx + len(idx_simulated_bus)]
+        V: FloatArray = y[nx: nx + len(idx_sim_buses)]
 
         # calculate conditions for the next iteration
         x_k = y[0: nx]
         V_k = Ymat_reproduce @ V
-        I_k = Ymat_all @ V_k
+        I_k = system_admittance_float @ V_k
 
         X = y[:nx, :].T
         V = y[nx: nx + nV, :].T @ Ymat_reproduce.T
-        I = V @ Ymat_all.T
+        I = V @ system_admittance_float.T
 
         ifault = np.array([
-            [x * 2, x * 2 + 1] for x in f_
+            [x * 2, x * 2 + 1] for x in cur_fault_buses
         ], dtype=int) # (n_fault, 2)
         I[:, ifault.flatten()] = y[nx + nV:, :].T
 
         if options.save_solution:
-            meta.solution = sol
+            meta.solution = (t_sol, y_orig, dy)
 
         metas.append(meta)
-        sols.append((sol.values.t[1:], X, V, I))
+        sols.append((t_sol[0:], X, V, I))
 
     t_all, x_all, V_all, I_all = [
         np.concatenate([x[i] for x in sols]) if i == 0 else np.vstack([x[i] for x in sols])

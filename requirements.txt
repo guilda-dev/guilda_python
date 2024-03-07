@@ -13,5 +13,5 @@ pyproject.toml
 python-dateutil
 pytz
 scipy
-scikits.odes
+assimulo
 six

@@ -28,12 +28,13 @@ options = SimulationOptions(
 result = net.simulate(
     (0, 10), 
     np.array([
+        [0, 0], # 1st generator
+        [0, 0],
+        [0, 0], 
+        [0, 0], # 2nd generator
         [0, 0],
         [0, 0],
-        [0, 0],
-        [0, 0],
-        [0, 0],
-        [0, 0],
+        # 3rd load does not have input
     ]), 
     [0, 1, 2], 
     options
