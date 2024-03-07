@@ -89,8 +89,10 @@ def get_dx_con(
         # pass data
         f = c.get_dx_u_func(linear)
         dx_ctrls_global[i], u_ctrl_global = f(
-            t, x_ctrls_global[i], [x_buses[i] for i in i_observe],
-            V_all[:, i_observe], I_all[:, i_input], [])
+            V_all[:, i_observe], I_all[:, i_input], 
+            x_ctrls_global[i], 
+            [x_buses[i] for i in i_observe], None, t
+        )
 
         idx = 0
         for i_input2 in i_input:
@@ -98,7 +100,7 @@ def get_dx_con(
             idx = idx + nu_bus[i_input2]
 
     # apply inputs from global controllers
-    for i, u_ctrl_g in u_global:
+    for i, u_ctrl_g in u_global.items():
         u_buses[i] += u_ctrl_g
 
     # calculate dx of local controllers
@@ -110,9 +112,10 @@ def get_dx_con(
         i_observe, i_input = ctrls_global_indices[i]
         f = c.get_dx_u_func(linear)
         dx_ctrls[i], u_ctrl = f(
-            t, x_ctrls[i], [x_buses[i] for i in i_observe],
             V_all[:, i_observe], I_all[:, i_observe],
-            [u_buses[i] for i in i_observe])
+            x_ctrls[i], 
+            [x_buses[i] for i in i_observe], [u_buses[i] for i in i_observe], t
+        )
 
         idx = 0
         for i_input2 in i_input:
@@ -120,7 +123,7 @@ def get_dx_con(
             idx = idx + nu_bus[i_input2]
             
     # apply inputs from local controllers
-    for i, u_ctrl_l in u_local:
+    for i, u_ctrl_l in u_local.items():
         u_buses[i] += u_ctrl_l
         
     

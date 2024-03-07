@@ -57,6 +57,12 @@ class _PowerNetwork(object):
 
     def add_branch(self, *branch: Branch):
         self.a_branch.extend(branch)
+        
+    def add_controller_global(self, *ctrl: Controller):
+        self.a_controller_global.extend(ctrl)
+        
+    def add_controller(self, *ctrl: Controller):
+        self.a_controller_local.extend(ctrl)
 
     @property
     def a_bus(self):

@@ -15,7 +15,7 @@ np.set_printoptions(
 
 # net2 = sample.IEEE68bus()
 
-net = sample.simple_3_bus_nishino()
+net = sample.simple_3_bus_nishino(True)
 net.initialize()
 
 Y = net.get_admittance_matrix()
@@ -40,6 +40,8 @@ scenario = SimulationScenario(
 
 options = SimulationOptions(
     linear=False,
+    rtol=1e-6,
+    atol=1e-6,
 )
 
 result = net.simulate(

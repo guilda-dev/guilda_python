@@ -1,4 +1,5 @@
 import numpy as np
+from guilda.controller.controller_broadcast_PI_AGC import ControllerBroadcastPIAGC
 
 from guilda.load import LoadCurrent, LoadImpedance
 from guilda.power_network import PowerNetwork
@@ -26,7 +27,7 @@ def simple_3_bus():
     return net
 
 
-def simple_3_bus_nishino():
+def simple_3_bus_nishino(controller = False):
     
     net = PowerNetwork()
     
@@ -58,5 +59,13 @@ def simple_3_bus_nishino():
     net.a_bus_dict[1].set_component(component1)
     net.a_bus_dict[2].set_component(component2)
     net.a_bus_dict[3].set_component(component3)
+    
+    if controller:
+        gen_indices = [1, 2]
+        ctrl = ControllerBroadcastPIAGC(
+            gen_indices, gen_indices, # type: ignore
+            -10, -500
+        )
+        net.add_controller_global(ctrl)
     
     return net
