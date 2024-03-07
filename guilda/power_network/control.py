@@ -1,4 +1,4 @@
-from typing import List, Dict, Hashable, Tuple
+from typing import Callable, List, Dict, Hashable, Tuple
 import numpy as np
 
 from guilda.bus import Bus
@@ -26,7 +26,7 @@ def get_dx_con(
 
     t: float,
     xVI_all: FloatArray,
-    u_all: FloatArray,
+    u_all: Callable[[float, int], FloatArray],
     u_indices: List[int],  # only these inputs are not 0
 
     fault_buses: List[int],
@@ -127,7 +127,7 @@ def get_dx_con(
     # apply inputs from simulation scenario
     idx = 0
     for i in u_indices:
-        u_buses[i] += u_all[idx:idx+nu_bus[i]]
+        u_buses[i] += u_all(t, i)
         idx += nu_bus[i]
         
         

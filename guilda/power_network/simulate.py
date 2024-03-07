@@ -4,7 +4,7 @@ import numpy as np
 
 from functools import reduce
 
-from typing import Tuple, List, Callable, Optional, Iterable, Hashable, Dict
+from typing import Set, Tuple, List, Callable, Optional, Iterable, Hashable, Dict
 
 from tqdm import tqdm
 from guilda.bus.bus import Bus
@@ -12,7 +12,7 @@ from guilda.controller.controller import Controller
 
 from guilda.power_network.base import _PowerNetwork, _sample2f, _idx2f
 
-from guilda.power_network.types import SimulationOptions, SimulationResult, SimulationSegment
+from guilda.power_network.types import BusConnect, BusFault, BusInput, SimulationOptions, SimulationResult, SimulationSegment, SimulationScenario
 from guilda.power_network.control import get_dx_con
 
 from guilda.base import ComponentEmpty
@@ -79,9 +79,7 @@ def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
 
 def simulate(
     self: _PowerNetwork,
-    t: Iterable[float],
-    u: Optional[FloatArray] = None,  # (n_u, n_t)
-    idx_u: Optional[Iterable[int]] = None,
+    scenario: SimulationScenario,
     options: Optional[SimulationOptions] = None,
 ):
 
@@ -89,27 +87,9 @@ def simulate(
     if options is None:
         options = SimulationOptions()
 
-    options.set_parameter_from_pn(self)
-    
-    # build bus list
-    bus_index_map = self.bus_index_map
+    bus_index_map, init_states, timestamps, events = scenario.parse(self)
+
     bus = [self.a_bus_dict[i] for i in bus_index_map]
-
-    # process u and index of u
-
-    if idx_u is None:
-        idx_u = []
-
-    t_list = list(t)
-    n_t = len(t_list)
-    n_u = np.sum([x.nu for x in bus])
-
-    if u is None:
-        u = np.zeros((n_u, n_t))
-
-    if u is None or len(u.shape) != 2:
-        raise TypeError(
-            f'u must be 2-dimensional array of shape {(n_u, n_t)}, but got {u.shape}.')
 
     controllers_global = self.a_controller_global
     controllers = self.a_controller_local
@@ -121,16 +101,10 @@ def simulate(
         controllers_global,
         controllers,
         Y,
-        t_list,
-        u,
-        idx_u if isinstance(idx_u, list) else list(idx_u),
-        options.fault,
-        options.x0_sys,
-        options.x0_con_global,
-        options.x0_con_local,
-        options.V0,
-        options.I0,
-        options.linear,
+        timestamps,
+        *init_states,
+        events,
+        scenario,
         options
     )
 
@@ -145,31 +119,17 @@ def solve_odes(
     system_admittance: ComplexArray,
 
     t: List[float],
-    u: FloatArray,  # (n_u, n_t)
-    u_indices: List[int],
-    fault: List[Tuple[Tuple[float, float], List[int]]],
-
+    
     x_init_bus: List[FloatArray],
     x_init_kg: List[FloatArray],
     x_init_k: List[FloatArray],
     V_init: List[complex],
     I_init: List[complex],
 
-    linear: bool,
+    events: Dict[float, List[Tuple[object, int, bool]]],
+    scenario: SimulationScenario, 
     options: SimulationOptions  # only used for initializing solver
 ):
-
-    # transform input data
-
-    fault_times: List[Tuple[float, float]] = [x[0] for x in fault]
-    fault_indices: List[List[int]] = [x[1] for x in fault]
-
-    uf = _sample2f(t, u)
-    fault_f = _idx2f(fault_times, fault_indices)
-
-    t_cand = sorted(list(set(
-        np.array(fault_times).flatten().tolist() + t
-    )))
     
     # build controller index map
     ctrls_global_indices = [
@@ -205,9 +165,7 @@ def solve_odes(
 
     system_admittance_float = complex_mat_to_float(system_admittance)
 
-    t_simulated = t_cand
-    if options.method.lower() == 'zoh':
-        t_simulated = get_t_simulated(t_cand, uf, fault_f)
+    t_simulated = t
 
     # :45
     # store simulation result
@@ -233,13 +191,58 @@ def solve_odes(
     pbar.update(0)
     ti = t_simulated[0]
     tf = t_simulated[-1]
+    
+    # event recorders
+    idx_with_input: Set[int] = set()
+    input_functions: Dict[int, Callable[[float], FloatArray]] = {}
+    idx_with_fault: Set[int] = set()
+    idx_disconnected: Set[int] = set()
+
+    def get_input(t: float, i: int):
+        ret = input_functions[i](t).reshape((-1, 1))
+        return ret
 
     # in each time span
     for i in range(len(t_simulated) - 1):
 
         tstart, tend = t_simulated[i: i + 2]
+        
+        # handle events
+        for e in events[tstart]:
+            obj, index, flag = e
+            
+            # input
+            if isinstance(obj, BusInput):
+                b_index = bus_index_map[obj.index]
+                if flag:
+                    idx_with_input.add(b_index)
+                    if callable(obj.value):
+                        input_functions[b_index] = obj.value
+                    else:
+                        input_functions[b_index] = obj.get_interp()
+                elif b_index in idx_with_input:
+                    idx_with_input.remove(b_index)
+                    
+            # fault
+            if isinstance(obj, BusFault):
+                b_index = bus_index_map[obj.index]
+                if flag:
+                    idx_with_fault.add(b_index)
+                elif b_index in idx_with_fault:
+                    idx_with_fault.remove(b_index)
+                    
+            # connection
+            # TODO install
+            if isinstance(obj, BusConnect):
+                b_index = bus_index_map[obj.index]
+                if flag:
+                    idx_disconnected.add(b_index)
+                elif b_index in idx_disconnected:
+                    idx_disconnected.remove(b_index)
+                
 
-        cur_fault_buses = fault_f((tstart + tend) / 2)
+        cur_fault_buses = sorted(list(idx_with_fault))
+        u_indices = sorted(list(idx_with_input))
 
         must_include_buses = set(list(cur_fault_buses) + idx_controlled_buses)
 
@@ -290,21 +293,20 @@ def solve_odes(
 
         # define the equation
 
-        def func_(
+        def func(
             t: float,
             x: FloatArray,
-            u: Callable[[float], FloatArray],
             xdot: FloatArray,
             # res: FloatArray,
         ):
 
             dx, con = get_dx_con(
-                linear,
+                options.linear,
                 buses, ctrls_global, ctrls, ctrls_global_indices, ctrls_indices, 
                 Ymat,
                 nx_bus, nx_kg, nx_k, nu_bus,
                 t, x.reshape(
-                    (-1, 1)), u(t), u_indices, cur_fault_buses, cur_sim_buses
+                    (-1, 1)), get_input, u_indices, cur_fault_buses, cur_sim_buses
             )
 
             n = dx.size
@@ -317,18 +319,6 @@ def solve_odes(
             ret = np.concatenate([dx.flatten() - xdot[:n], con.flatten()])
             return ret
             # TODO add reporter?
-
-        # interpolate input
-        if options.method.lower() == 'zoh':
-            u_ = uf((tstart + tend) / 2)
-            def func(t, x, dx): return func_(t, x, lambda _: u_, dx)
-        else:
-            us_ = uf(tstart)
-            ue_ = uf(tend)
-            def u__(t): return (ue_ * (t - tstart) +
-                                us_ * (tend - t)) / (tend - tstart)
-
-            def func(t, x, dx): return func_(t, x, u__, dx)
 
         # :138
 
@@ -407,7 +397,7 @@ def solve_odes(
         nx_bus=nx_bus,
         nu_bus=nu_bus,
         segments=metas,
-        linear=linear,
+        linear=options.linear,
         x=x_part,
         V=V_part,
         I=I_part,

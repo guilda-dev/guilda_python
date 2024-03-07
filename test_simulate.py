@@ -24,6 +24,8 @@ V, I = net.calculate_power_flow()
 net.print_bus_state()
 
 scenario = SimulationScenario(
+    tstart=0, 
+    tend=60,
     u=[
         BusInput(
             index=3,
@@ -31,7 +33,7 @@ scenario = SimulationScenario(
             value=np.array([
                 [0, 0.05, 0.1, 0.1],
                 [0,    0,   0,   0],
-            ]),
+            ]).T,
         )
     ]
 )
@@ -39,15 +41,9 @@ scenario = SimulationScenario(
 options = SimulationOptions(
     linear=False,
 )
-options.set_parameter_from_pn(net)
 
 result = net.simulate(
-    (0, 10, 20, 60),
-    np.array([
-        [0, 0.05, 0.1, 0.1],
-        [0,    0,   0,   0],
-    ]),
-    [2],
+    scenario, 
     options
 )
 

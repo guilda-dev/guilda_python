@@ -104,7 +104,7 @@ class SimulationScenario:
         # check timestamps and build event record
         
         timestamps = set([self.tstart, self.tend])
-        events: Dict[float, List[Tuple[int, int, bool]]] = defaultdict(list)
+        events: Dict[float, List[Tuple[object, int, bool]]] = defaultdict(list)
         events[self.tstart] = []
         events[self.tend] = []
         
@@ -115,16 +115,17 @@ class SimulationScenario:
             t_max = -np.Infinity
             for _t in u.time:
                 timestamps.add(_t)
+                events[_t] = []
                 t_count += 1
                 t_min = min(t_min, _t)
                 t_max = max(t_max, _t)
             # san check
             if t_count < 2:
                 raise RuntimeError('Invalid input time duration.')
-            if not u.value:
+            if u.value is None:
                 raise RuntimeError('Empty input record.')
-            events[t_min].append((EVENT_INPUT, i, True))
-            events[t_max].append((EVENT_INPUT, i, False))
+            events[t_min].append((u, i, True))
+            events[t_max].append((u, i, False))
             
         # fault
         for i, f in enumerate(self.fault):
@@ -132,16 +133,16 @@ class SimulationScenario:
             if t_max <= t_min:
                 raise RuntimeError('Invalid input time duration.')
                 
-            events[t_min].append((EVENT_FAULT, i, True))
-            events[t_max].append((EVENT_FAULT, i, False))
+            events[t_min].append((f, i, True))
+            events[t_max].append((f, i, False))
             
         for i, c in enumerate(self.conn):
-            events[c.time].append((EVENT_CONNECTION, i, not c.disconnect))
+            events[c.time].append((c, i, not c.disconnect))
             
         timestamp_list = list(timestamps)
         timestamp_list.sort()
         
-        return bus_index_map, (x0_sys, x0_con_global, x0_con_local, V0, I0, timestamp_list, events)
+        return bus_index_map, (x0_sys, x0_con_global, x0_con_local, V0, I0), timestamp_list, dict(events)
             
             
     
@@ -151,18 +152,6 @@ class SimulationScenario:
 class SimulationOptions:
     
     linear: bool = False
-    
-    fault: List[Tuple[Tuple[float, float], List[int]]] = field(default_factory = list)
-    
-    x0_sys: List[FloatArray] = field(default_factory = list)
-    V0: List[complex] = field(default_factory = list)
-    I0: List[complex] = field(default_factory = list)
-    
-    x0_con_local: List[FloatArray] = field(default_factory = list)
-    x0_con_global: List[FloatArray] = field(default_factory = list)
-    
-    method: Union[Literal['zoh'], Literal['foh']] = 'zoh'
-    
     solver_method: str = 'ida'
     
     atol: float = 1e-8
@@ -176,16 +165,6 @@ class SimulationOptions:
     tools: bool = False
     save_solution: bool = False
     
-    def set_parameter_from_pn(self, pn: _PowerNetwork):
-        
-        self.x0_sys = pn.x_equilibrium or []
-        self.V0 = pn.V_equilibrium or []
-        self.I0 = pn.I_equilibrium or []
-        
-        self.x0_con_local = [c.get_x0() for c in pn.a_controller_local]
-        self.x0_con_global = [c.get_x0() for c in pn.a_controller_global]
-        
-        # TODO controller
         
 @dataclass
 class SimulationSegment:
