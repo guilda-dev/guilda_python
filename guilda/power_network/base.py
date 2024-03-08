@@ -1,3 +1,5 @@
+from functools import cached_property
+from varname import nameof
 import numpy as np
 from numpy.linalg import inv
 
@@ -11,8 +13,11 @@ from guilda.bus import Bus
 from guilda.branch import Branch
 from guilda.controller import Controller
 from guilda.utils.calc import complex_mat_to_float
+from guilda.utils.runtime import del_cache
 
 from guilda.utils.typing import FloatArray, ComplexArray
+
+_pn_cached_vars: List[str] = []
 
 
 class _PowerNetwork(object):
@@ -20,24 +25,22 @@ class _PowerNetwork(object):
     def __init__(self):
 
         self.a_bus_dict: Dict[Hashable, Bus] = {}
-        self.bus_indices_cache: Optional[List[Hashable]] = None
-        self.bus_index_map_cache: Optional[Dict[Hashable, int]] = None
 
         self.a_branch: List[Branch] = []
         self.a_controller_local: List[Controller] = []
         self.a_controller_global: List[Controller] = []
 
-    @property
+    @cached_property
     def x_equilibrium(self) -> List[FloatArray]:
-        return [b.component.x_equilibrium for b in self.a_bus_dict.values()]
+        return [self.a_bus_dict[b].component.x_equilibrium for b in self.bus_indices]
 
-    @property
+    @cached_property
     def V_equilibrium(self) -> List[complex]:
-        return [b.V_equilibrium or 0 for b in self.a_bus_dict.values()]
+        return [self.a_bus_dict[b].V_equilibrium or 0 for b in self.bus_indices]
 
-    @property
+    @cached_property
     def I_equilibrium(self) -> List[complex]:
-        return [b.I_equilibrium or 0 for b in self.a_bus_dict.values()]
+        return [self.a_bus_dict[b].I_equilibrium or 0 for b in self.bus_indices]
 
     def add_bus(self, *buses: Bus):
         '''
@@ -52,15 +55,16 @@ class _PowerNetwork(object):
             if bus.index in self.a_bus_dict:
                 raise RuntimeError(f'Bus of index {bus.index} already exists.')
             self.a_bus_dict[bus.index] = bus
-            self.bus_index_map_cache = None
-            self.bus_indices_cache = None
+
+        for name in _pn_cached_vars:
+            del_cache(self, name)
 
     def add_branch(self, *branch: Branch):
         self.a_branch.extend(branch)
-        
+
     def add_controller_global(self, *ctrl: Controller):
         self.a_controller_global.extend(ctrl)
-        
+
     def add_controller(self, *ctrl: Controller):
         self.a_controller_local.extend(ctrl)
 
@@ -68,20 +72,16 @@ class _PowerNetwork(object):
     def a_bus(self):
         return self.a_bus_dict.values()
 
-    @property
+    @cached_property
     def bus_indices(self):
-        if self.bus_indices_cache is None:
-            self.bus_indices_cache = list(self.a_bus_dict.keys())
-        return self.bus_indices_cache
+        return list(self.a_bus_dict.keys())
 
-    @property
+    @cached_property
     def bus_index_map(self):
-        if self.bus_index_map_cache is None:
-            m = {}
-            for i in self.bus_indices:
-                m[i] = len(m)
-            self.bus_index_map_cache = m
-        return self.bus_index_map_cache
+        m = {}
+        for i in self.bus_indices:
+            m[i] = len(m)
+        return m
 
     def sort_buses(self):
         sorted_buses = dict(sorted(self.a_bus_dict.items(),
@@ -127,7 +127,7 @@ class _PowerNetwork(object):
             out = np.zeros((n * 2, 1))
             for index, i in self.bus_index_map.items():
                 bus = self.a_bus_dict[index]
-                out_i = bus.get_constraint(V[i].real, V[i].imag, P[i], Q[i])
+                out_i = bus.get_constraint(V[i].real, V[i].imag, P[i], Q[i]) # type: ignore
                 out[i * 2: i * 2 + 2, :] = out_i
             return out.flatten()
 
@@ -191,3 +191,12 @@ class _PowerNetwork(object):
         C_ = C1-C2 @ inv(A22) @ A21
         D_ = 0-C2 @ inv(A22) @ B2
         return [A_, B_, C_, D_]
+
+
+_pn_cached_vars += [
+    nameof(_PowerNetwork.bus_index_map),
+    nameof(_PowerNetwork.bus_indices),
+    nameof(_PowerNetwork.x_equilibrium),
+    nameof(_PowerNetwork.V_equilibrium),
+    nameof(_PowerNetwork.I_equilibrium),
+]

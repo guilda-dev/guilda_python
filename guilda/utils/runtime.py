@@ -7,3 +7,9 @@ def suppress_stdout(func):
         with io.StringIO() as buf, redirect_stdout(buf):
             return func(*args, **kwargs)
     return wrapper
+
+def del_cache(obj, prop):
+    if prop in obj.__dict__:
+        delattr(obj, prop)
+        return True
+    return False

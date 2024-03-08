@@ -34,14 +34,15 @@ def simple_3_bus_nishino(controller = False, generator_model: Type[Generator]=Ge
     
     y12 = 0.010 + 0.085j
     y23 = 0.017 + 0.092j
+    shunt = 0
+    
+    net.add_bus(BusSlack(2, 0, shunt))
+    net.add_bus(BusPV(0.5, 2, shunt))
+    net.add_bus(BusPQ(-3, 0, shunt))
 
     net.add_branch(BranchPi(1, 2, y12, 0))
     net.add_branch(BranchPi(2, 3, y23, 0))
 
-    shunt = 0
-    net.add_bus(BusSlack(2, 0, shunt))
-    net.add_bus(BusPV(0.5, 2, shunt))
-    net.add_bus(BusPQ(-3, 0, shunt))
 
     # definition of generators
     
