@@ -40,20 +40,20 @@ class AvrSadamoto2019(Avr):
     def nx(self):
         return 1
 
-    def initialize(self, Vfd: complex, Vabs: float):
+    def initialize(self, Vfd: complex, V_abs: float):
         self.Vfd_st = Vfd
-        self.Vabs_st = Vabs
+        self.V_abs_st = V_abs
         x = np.array([[Vfd]])
         return x
 
-    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
+    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, V_abs: float, Efd: complex):
         Vfd: complex = x_avr[0,0]
-        Vef: float = self.Ka*(Vabs - self.Vabs_st + u[0, 0])
+        Vef: float = self.Ka*(V_abs - self.V_abs_st + u[0, 0])
         dVfd = (-Vfd + self.Vfd_st - Vef)/self.Te
         return np.array([[dVfd]]), Vfd
 
-    def get_Vfd_linear(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
-        return self.get_Vfd(u, x_avr, Vabs, Efd)
+    def get_Vfd_linear(self, u: FloatArray, x_avr: FloatArray, V_abs: float, Efd: complex):
+        return self.get_Vfd(u, x_avr, V_abs, Efd)
 
     def get_linear_matrix(self):
         A = np.array(-1/self.Te).reshape(1, 1)

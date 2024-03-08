@@ -8,15 +8,15 @@ from guilda.bus.bus import Bus
 
 
 class BusSlack(Bus):
-    def __init__(self, Vabs: float, Vangle: float, shunt: complex, index: Hashable = None):
+    def __init__(self, V_abs: float, V_angle: float, shunt: complex, index: Hashable = None):
         super().__init__(shunt, index=index)
-        self.Vabs: float = Vabs
-        self.Vangle: float = Vangle
+        self.V_abs: float = V_abs
+        self.V_angle: float = V_angle
 
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
-        Vabs = norm([Vr, Vi])
-        Vangle = phase(complex(Vr, Vi))
+        V_abs = norm([Vr, Vi])
+        V_angle = phase(complex(Vr, Vi))
         return np.array([
-            [Vabs-self.Vabs], 
-            [Vangle-self.Vangle]
+            [V_abs-self.V_abs], 
+            [V_angle-self.V_angle]
         ])

@@ -7,11 +7,11 @@ class Avr():
     
     def __init__(self):
         self.Vfd_st: complex = 0
-        self.Vabs_st: float = 0
+        self.V_abs_st: float = 0
 
         A, B, C, D = self.get_linear_matrix()
         sys = SS(A, B, C, D)
-        sys.set_inputs(['Vabs', 'Efd', 'u_avr'])
+        sys.set_inputs(['V_abs', 'Efd', 'u_avr'])
         sys.set_outputs(['Vfd'])
         self.sys = sys
 
@@ -20,14 +20,14 @@ class Avr():
         # このavrには状態がない
         return 0
 
-    def initialize(self, Vfd: complex, Vabs: float):
+    def initialize(self, Vfd: complex, V_abs: float):
         self.Vfd_st = Vfd
-        self.Vabs_st = Vabs
+        self.V_abs_st = V_abs
         # 状態がない
         x = np.zeros((0, 1))
         return x
 
-    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, Vabs: float, Efd: complex):
+    def get_Vfd(self, u: FloatArray, x_avr: FloatArray, V_abs: float, Efd: complex):
         Vfd = self.Vfd_st + u[0, 0]
         dx = np.zeros((0, 1))
         return dx, Vfd

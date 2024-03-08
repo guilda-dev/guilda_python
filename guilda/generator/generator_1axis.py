@@ -53,31 +53,31 @@ class Generator1Axis(Generator):
         M = self.parameter.M
         d = self.parameter.D
 
-        Vabs = abs(V)
-        Vangle = atan2(V.imag, V.real)
+        V_abs = abs(V)
+        V_angle = atan2(V.imag, V.real)
 
         delta: float = x[0, 0]
         omega: float = x[1, 0]
         E = x[2, 0]
 
-        Vabscos = V.real*cos(delta) + V.imag*sin(delta)
-        Vabssin = V.real*sin(delta) - V.imag*cos(delta)
+        V_abscos = V.real*cos(delta) + V.imag*sin(delta)
+        V_abssin = V.real*sin(delta) - V.imag*cos(delta)
 
-        Ir = (E-Vabscos)*sin(delta)/Xdp + Vabssin*cos(delta)/Xq
-        Ii = -(E-Vabscos)*cos(delta)/Xdp + Vabssin*sin(delta)/Xq
+        Ir = (E-V_abscos)*sin(delta)/Xdp + V_abssin*cos(delta)/Xq
+        Ii = -(E-V_abscos)*cos(delta)/Xdp + V_abssin*sin(delta)/Xq
 
         con = np.array([[I.real - Ir], [I.imag - Ii]])
 
-        Efd = Xd*E/Xdp - (Xd/Xdp - 1)*Vabscos
+        Efd = Xd*E/Xdp - (Xd/Xdp - 1)*V_abscos
 
         # スカラーを返す
         dx_avr, dx_pss, dx_gov, \
-        Vfd, P = self.get_components_dx(x, u, omega, Vabs, Efd)
+        Vfd, P = self.get_components_dx(x, u, omega, V_abs, Efd)
 
         dE = (-Efd + Vfd)/Tdo
         dDelta: float = self.omega0*omega
-        dOmega: float = (P - d*omega - Vabs*E*sin(delta-Vangle)/Xdp +
-                  Vabs**2*(1/Xdp-1/Xq)*sin(2*(delta-Vangle))/2)/M
+        dOmega: float = (P - d*omega - V_abs*E*sin(delta-V_angle)/Xdp +
+                  V_abs**2*(1/Xdp-1/Xq)*sin(2*(delta-V_angle))/2)/M
 
         dx_gen = [[dDelta], [dOmega], [dE]]
 
@@ -135,31 +135,31 @@ class Generator1Axis(Generator):
         E = x[2, 0]
 
         # 以下、行ベクトル
-        dVabscos_dV = np.array([cos(delta), sin(delta)]).reshape(1, -1)
-        dVabssin_dV = np.array([sin(delta), -cos(delta)]).reshape(1, -1)
-        dIr_dV = -dVabscos_dV*sin(delta)/Xdp + dVabssin_dV*cos(delta)/Xq
-        dIi_dV = dVabscos_dV*cos(delta)/Xdp + dVabssin_dV*sin(delta)/Xq
+        dV_abscos_dV = np.array([cos(delta), sin(delta)]).reshape(1, -1)
+        dV_abssin_dV = np.array([sin(delta), -cos(delta)]).reshape(1, -1)
+        dIr_dV = -dV_abscos_dV*sin(delta)/Xdp + dV_abssin_dV*cos(delta)/Xq
+        dIi_dV = dV_abscos_dV*cos(delta)/Xdp + dV_abssin_dV*sin(delta)/Xq
 
         # 以下、スカラー
-        Vabscos = V.real*cos(delta) + V.imag*sin(delta)
-        Vabssin = V.real*sin(delta) - V.imag*cos(delta)
-        dVabscos = -Vabssin
-        dVabssin = Vabscos
+        V_abscos = V.real*cos(delta) + V.imag*sin(delta)
+        V_abssin = V.real*sin(delta) - V.imag*cos(delta)
+        dV_abscos = -V_abssin
+        dV_abssin = V_abscos
 
         # 以下、行ベクトル
         vec1 = np.concatenate(
-            [np.array([[dVabscos]]), np.array([[0]]), dVabscos_dV], axis=1)
+            [np.array([[dV_abscos]]), np.array([[0]]), dV_abscos_dV], axis=1)
         vec2 = np.array([0, Xd/Xdp, 0, 0]).reshape(1, -1)
         dEfd = -vec1*(Xd/Xdp-1) + vec2
 
         # 以下、スカラー
-        dIr_dd = (-dVabscos*sin(delta)+(E-Vabscos)*cos(delta)) / \
-            Xdp + (dVabssin*cos(delta)-Vabssin*sin(delta))/Xq
-        dIi_dd = (dVabscos*cos(delta)+(E-Vabscos)*sin(delta)) / \
-            Xdp + (dVabssin*sin(delta)+Vabssin*cos(delta))/Xq
+        dIr_dd = (-dV_abscos*sin(delta)+(E-V_abscos)*cos(delta)) / \
+            Xdp + (dV_abssin*cos(delta)-V_abssin*sin(delta))/Xq
+        dIi_dd = (dV_abscos*cos(delta)+(E-V_abscos)*sin(delta)) / \
+            Xdp + (dV_abssin*sin(delta)+V_abssin*cos(delta))/Xq
 
-        Ieq_vec = np.array([[(E-Vabscos)*sin(delta)/Xdp + Vabssin*cos(delta)/Xq],
-                            [-(E-Vabscos)*cos(delta)/Xdp + Vabssin*sin(delta)/Xq]])
+        Ieq_vec = np.array([[(E-V_abscos)*sin(delta)/Xdp + V_abssin*cos(delta)/Xq],
+                            [-(E-V_abscos)*cos(delta)/Xdp + V_abssin*sin(delta)/Xq]])
 
         # (delta, E, V) => (Ir, Ii)
         KI_vec1 = np.concatenate(
@@ -183,17 +183,17 @@ class Generator1Axis(Generator):
         SS.set_inputs(sys_fb, fb_inputs)
         SS.set_outputs(sys_fb, fb_outputs)
 
-        Vabs = abs(V)
+        V_abs = abs(V)
         # sys_Vの直達行列(3×2)
         D_V = np.concatenate([np.identity(2), np.array(
-            [V.real, V.imag]).reshape(1, -1)/Vabs], axis=0)
+            [V.real, V.imag]).reshape(1, -1)/V_abs], axis=0)
         A_V = np.zeros((1, 0))
         B_V = np.zeros((0, 2))
         C_V = np.zeros((3, 0))
         sys_V = SS(A_V, B_V, C_V, D_V)
 
         V_inputs = ['Vrin', 'Viin']
-        V_outputs = ['Vr', 'Vi', 'Vabs']
+        V_outputs = ['Vr', 'Vi', 'V_abs']
         SS.set_inputs(sys_V, V_inputs)
         SS.set_outputs(sys_V, V_outputs)
 
@@ -220,7 +220,7 @@ class Generator1Axis(Generator):
                 ['sys_fb.E', 'sys_swing.E'],
                 ['sys_fb.Vr', 'sys_V.Vr'],
                 ['sys_fb.Vi', 'sys_V.Vi'],
-                ['sys_avr.Vabs', 'sys_V.Vabs'],
+                ['sys_avr.V_abs', 'sys_V.V_abs'],
                 ['sys_swing.Vfd', 'sys_avr.Vfd'],
                 ['sys_avr.u_avr', 'sys_pss.v_pss'],
                 ['sys_pss.omega', 'sys_swing.omega'],
@@ -280,8 +280,8 @@ class Generator1Axis(Generator):
     
     def get_self_equilibrium(self, V: complex, I: complex):
         
-        Vabs = abs(V)
-        Vangle = phase(V)
+        V_abs = abs(V)
+        V_angle = phase(V)
         Pow = I.conjugate() * V
         P = Pow.real
         Q = Pow.imag
@@ -290,12 +290,12 @@ class Generator1Axis(Generator):
         Xdp = self.parameter.Xd_prime 
         Xq = self.parameter.Xq 
 
-        delta = Vangle + atan(P/(Q+(Vabs**2)/Xq))
-        Enum = Vabs**4 + Q**2*Xdp*Xq + Q*Vabs**2*Xdp + Q*Vabs**2*Xq + P**2*Xdp*Xq
-        Eden = Vabs*sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*Q*Vabs**2*Xq + Vabs**4)
+        delta = V_angle + atan(P/(Q+(V_abs**2)/Xq))
+        Enum = V_abs**4 + Q**2*Xdp*Xq + Q*V_abs**2*Xdp + Q*V_abs**2*Xq + P**2*Xdp*Xq
+        Eden = V_abs*sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*Q*V_abs**2*Xq + V_abs**4)
         E = Enum/Eden
 
-        Vfd = Xd*E/Xdp - (Xd/Xdp-1)*Vabs*cos(delta-Vangle)
+        Vfd = Xd*E/Xdp - (Xd/Xdp-1)*V_abs*cos(delta-V_angle)
         
         x_gen = np.array([[delta], [0], [E]])
         

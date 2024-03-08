@@ -100,7 +100,7 @@ Actually, it is the classical model
     def nl(self):
         return 0
 
-    def get_components_dx(self, x: FloatArray, u: FloatArray, omega: float, Vabs: float, Efd: complex):
+    def get_components_dx(self, x: FloatArray, u: FloatArray, omega: float, V_abs: float, Efd: complex):
         
         nx = self.nx_gen
         
@@ -114,7 +114,7 @@ Actually, it is the classical model
         
         dx_pss, v = self.pss.get_u(x_pss, omega)
         dx_avr, Vfd = self.avr.get_Vfd(
-            x_avr=x_avr, Vabs=Vabs, Efd=Efd, u=u[0:1, :]-v)
+            x_avr=x_avr, V_abs=V_abs, Efd=Efd, u=u[0:1, :]-v)
         dx_gov, P = self.governor.get_P(x_gov, u[1:2, :])
         
         return dx_avr, dx_pss, dx_gov, Vfd, P
@@ -132,8 +132,8 @@ Actually, it is the classical model
         assert x is not None
         assert u is not None
 
-        Vabs = abs(V)
-        Vangle = atan2(V.imag, V.real)
+        V_abs = abs(V)
+        V_angle = atan2(V.imag, V.real)
 
         delta: float = x[0, 0]
         omega: float = x[1, 0]
@@ -141,7 +141,7 @@ Actually, it is the classical model
         Efd = 0
         
         dx_avr, dx_pss, dx_gov, \
-        Vfd, P = self.get_components_dx(x, u, omega, Vabs, Efd)
+        Vfd, P = self.get_components_dx(x, u, omega, V_abs, Efd)
         
         Xd = self.parameter.Xd
         Xq = self.parameter.Xq
@@ -201,21 +201,25 @@ Actually, it is the classical model
 
     def get_self_equilibrium(self, V: complex, I: complex):
         
-        Vabs = abs(V)
-        Vangle = phase(V)
+        V_abs = abs(V)
+        V_angle = phase(V)
+        I_abs = abs(I)
+        I_angle = phase(I)
         Pow = I.conjugate() * V
         P = Pow.real
         Q = Pow.imag
         
+        
         Xd: float = self.parameter.Xd 
         Xq: float = self.parameter.Xq 
         
-        delta: float = Vangle + atan(P/(Q+(Vabs**2)/Xq))
+        delta: float = V_angle + atan(P/(Q+(V_abs**2)/Xq))
         
-        Id: complex = (1j * I * (cos(delta) - 1j * sin(delta)))
-        Vq: complex = (1j * V * (cos(delta) - 1j * sin(delta)))
-
-        Vfd = Id * Xd + Vq
+        Ev = V_abs * cos(delta - V_angle)
+        Exi = Xd * I_abs * sin(delta - I_angle)
+        E = Ev + Exi
+        
+        Vfd = E
         
         x_gen = np.array([[delta], [0]])
         
@@ -224,17 +228,17 @@ Actually, it is the classical model
     def set_equilibrium(self, V: complex, I: complex) -> None:
         super().set_equilibrium(V, I)
         
-        Vabs = abs(V)
+        V_abs = abs(V)
         Pow = I.conjugate() * V
         P = Pow.real
         
         x_gen, Vfd = self.get_self_equilibrium(V, I)
-        x_avr = self.avr.initialize(Vfd, Vabs)
+        x_avr = self.avr.initialize(Vfd, V_abs)
         x_gov = self.governor.initialize(P)
         x_pss = self.pss.initialize()
         x_st = np.vstack((x_gen, x_avr, x_gov, x_pss))
-        self.alpha_st = np.array([P, Vfd, Vabs]).reshape(-1, 1)
+        self.alpha_st = np.array([P, Vfd, V_abs]).reshape(-1, 1)
         
         self._x_eq = x_st
-        self.set_linear_matrix(V, x_st)
+        # self.set_linear_matrix(V, x_st)
         

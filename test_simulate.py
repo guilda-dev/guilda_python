@@ -1,4 +1,5 @@
 import numpy as np
+from guilda.generator import Generator, Generator1Axis
 from guilda.power_network import SimulationOptions
 
 import guilda.models as sample
@@ -15,7 +16,7 @@ np.set_printoptions(
 
 # net2 = sample.IEEE68bus()
 
-net = sample.simple_3_bus_nishino(True)
+net = sample.simple_3_bus_nishino(True, generator_model=Generator1Axis)
 net.initialize()
 
 Y = net.get_admittance_matrix()

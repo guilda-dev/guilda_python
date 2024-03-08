@@ -6,14 +6,14 @@ from numpy.linalg import norm
 from guilda.bus.bus import Bus
 
 class BusPV(Bus):
-    def __init__(self, P: float, Vabs: float, shunt: complex, index: Hashable = None):
+    def __init__(self, P: float, V_abs: float, shunt: complex, index: Hashable = None):
         super().__init__(shunt, index=index)
         self.P: float = P
-        self.Vabs: float = Vabs
+        self.V_abs: float = V_abs
 
     def get_constraint(self, Vr: float, Vi: float, P: float, Q: float):
-        Vabs = norm([Vr, Vi])
+        V_abs = norm([Vr, Vi])
         return np.array([
             [P-self.P],
-            [Vabs-self.Vabs]
+            [V_abs-self.V_abs]
         ])

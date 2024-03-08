@@ -1,11 +1,12 @@
+from typing import Type
 import numpy as np
-from guilda.controller.controller_broadcast_PI_AGC import ControllerBroadcastPIAGC
 
+from guilda.controller.controller_broadcast_PI_AGC import ControllerBroadcastPIAGC
 from guilda.load import LoadCurrent, LoadImpedance
 from guilda.power_network import PowerNetwork
 from guilda.bus import BusSlack, BusPV, BusPQ
 from guilda.branch import BranchPi
-from guilda.generator import Generator1Axis, GeneratorParameters
+from guilda.generator import Generator, Generator1Axis, GeneratorParameters
 
 
 def simple_3_bus():
@@ -27,7 +28,7 @@ def simple_3_bus():
     return net
 
 
-def simple_3_bus_nishino(controller = False):
+def simple_3_bus_nishino(controller = False, generator_model: Type[Generator]=Generator1Axis):
     
     net = PowerNetwork()
     
@@ -46,11 +47,11 @@ def simple_3_bus_nishino(controller = False):
     
     omega0 = np.pi * 60 * 2
     
-    component1 = Generator1Axis(omega0, GeneratorParameters(
+    component1 = generator_model(omega0, GeneratorParameters(
         Xd = 1.569, Xd_prime = 0.963, Xq = 0.963, Tdo = 5.14, M = 100, D = 10,
     ))
     
-    component2 = Generator1Axis(omega0, GeneratorParameters(
+    component2 = generator_model(omega0, GeneratorParameters(
         Xd = 1.220, Xd_prime = 0.667, Xq = 0.667, Tdo = 8.97, M = 12, D = 10,
     ))
     

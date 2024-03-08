@@ -56,8 +56,8 @@ class Generator2Axis(Generator):
         M = self.parameter.M
         d = self.parameter.D
 
-        Vabs = abs(V)
-        Vangle = atan2(V.imag, V.real)
+        V_abs = abs(V)
+        V_angle = atan2(V.imag, V.real)
 
         delta, omega, Eq, Ed = x[:, 0]
 
@@ -81,7 +81,7 @@ class Generator2Axis(Generator):
 
         # スカラーを返す
         dx_avr, dx_pss, dx_gov, \
-            Vfd, P = self.get_components_dx(x, u, omega, Vabs, Efd)
+            Vfd, P = self.get_components_dx(x, u, omega, V_abs, Efd)
 
         dEq = (-Efd + Vfd)/Tdo
         dEd = (-Efq)/Tqo
@@ -96,10 +96,10 @@ class Generator2Axis(Generator):
 
     def get_self_equilibrium(self, V: complex, I: complex):
 
-        Vangle = phase(V)
-        Vabs = abs(V)
-        Iangle = phase(I)
-        Iabs = abs(I)
+        V_angle = phase(V)
+        V_abs = abs(V)
+        I_angle = phase(I)
+        I_abs = abs(I)
 
         Pow = I.conjugate() * V
         P = Pow.real
@@ -110,14 +110,14 @@ class Generator2Axis(Generator):
         Xq = self.parameter.Xq
         Xqp = self.parameter.Xq_prime
 
-        delta = Vangle + atan(P/(Q+Vabs**2/Xq))
-        Eqnum = P**2*Xdp*Xq + Q**2*Xdp*Xq + Vabs**2*Q*Xq + Vabs**2*Q*Xdp + Vabs**4
-        Eqden = Vabs*sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*Vabs**2*Q*Xq + Vabs**4)
+        delta = V_angle + atan(P/(Q+V_abs**2/Xq))
+        Eqnum = P**2*Xdp*Xq + Q**2*Xdp*Xq + V_abs**2*Q*Xq + V_abs**2*Q*Xdp + V_abs**4
+        Eqden = V_abs*sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*V_abs**2*Q*Xq + V_abs**4)
         Eq = Eqnum/Eqden
-        Ednum = (Xq-Xqp)*Vabs*P
-        Edden = sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*Vabs**2*Q*Xq + Vabs**4)
+        Ednum = (Xq-Xqp)*V_abs*P
+        Edden = sqrt(P**2*Xq**2 + Q**2*Xq**2 + 2*V_abs**2*Q*Xq + V_abs**4)
         Ed = Ednum/Edden
-        Vfd = Eq + (Xd-Xdp)*Iabs*sin(delta-Iangle)
+        Vfd = Eq + (Xd-Xdp)*I_abs*sin(delta-I_angle)
 
         x_gen = np.array([[delta], [0], [Eq], [Ed]])
 
