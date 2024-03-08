@@ -75,13 +75,20 @@ Additionally, a demonstrative example of implementing, simulating, and adding co
 
 ## Requirements
 
-- Python version >=3.7
+- Python version >=3.9
 - C Compiler
 - Fortran Compiler
 - Sundials version >=5.1.0
 
 - It will be used in simulation. See [this page](https://scikits-odes.readthedocs.io/en/stable/installation.html).
 - Alternatively, installing from conda: `conda install -c conda-forge scikits.odes` will ease the process.
+
+The main libraries are:
+
+- `numpy`
+- `scipy`
+- `control`
+- `assimulo`
 
 Python Libraries (should we indicate the purpose of each library?):
 

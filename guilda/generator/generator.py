@@ -143,7 +143,6 @@ Actually, it is the classical model
 
         Xd = self.parameter.Xd
         Xq = self.parameter.Xq
-        M = self.parameter.M
         d = self.parameter.D
 
         Vd = V.real * sin(delta) - V.imag * cos(delta)
@@ -175,20 +174,14 @@ Actually, it is the classical model
         assert x is not None
         assert u is not None
 
-        A = self.system_matrix.A
-        B = self.system_matrix.B
-        C = self.system_matrix.C
-        D = self.system_matrix.D
-        BV = self.system_matrix.BV
-        DV = self.system_matrix.DV
-        BI = self.system_matrix.BI
-        DI = self.system_matrix.DI
-        dx = A @ (x-self.x_equilibrium) + B @ u + \
-            BV @ complex_to_col_vec(V-self.V_equilibrium) + \
-            BI @ complex_to_col_vec(I-self.I_equilibrium)
-        con = C @ (x-self.x_equilibrium) + D @ u + \
-            DV @ complex_to_col_vec(V-self.V_equilibrium) + \
-            DI @ complex_to_col_vec(I-self.I_equilibrium)
+        s = self.system_matrix
+        
+        dx = s.A @ (x-self.x_equilibrium) + s.B @ u + \
+            s.BV @ complex_to_col_vec(V-self.V_equilibrium) + \
+            s.BI @ complex_to_col_vec(I-self.I_equilibrium)
+        con = s.C @ (x-self.x_equilibrium) + s.D @ u + \
+            s.DV @ complex_to_col_vec(V-self.V_equilibrium) + \
+            s.DI @ complex_to_col_vec(I-self.I_equilibrium)
 
         return dx, con
 
@@ -235,6 +228,7 @@ Actually, it is the classical model
         x_avr = self.avr.initialize(Vfd, V_abs)
         x_gov = self.governor.initialize(P)
         x_pss = self.pss.initialize()
+        
         x_st = np.vstack((x_gen, x_avr, x_gov, x_pss))
         self.alpha_st = np.array([P, Vfd, V_abs]).reshape(-1, 1)
 
