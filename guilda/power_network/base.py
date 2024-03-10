@@ -7,7 +7,7 @@ from scipy.optimize import root
 from scipy.linalg import block_diag
 
 
-from typing import Tuple, List, Optional, Callable, Dict, Hashable, Iterable
+from typing import Tuple, List, Optional, Callable, Dict, Hashable, Iterable, overload
 
 from guilda.bus import Bus
 from guilda.branch import Branch
@@ -29,18 +29,13 @@ class _PowerNetwork(object):
         self.a_branch: List[Branch] = []
         self.a_controller_local: List[Controller] = []
         self.a_controller_global: List[Controller] = []
-
-    @cached_property
-    def x_equilibrium(self) -> List[FloatArray]:
-        return [self.a_bus_dict[b].component.x_equilibrium for b in self.bus_indices]
-
-    @cached_property
-    def V_equilibrium(self) -> List[complex]:
-        return [self.a_bus_dict[b].V_equilibrium or 0 for b in self.bus_indices]
-
-    @cached_property
-    def I_equilibrium(self) -> List[complex]:
-        return [self.a_bus_dict[b].I_equilibrium or 0 for b in self.bus_indices]
+        
+    # network construction & definition
+        
+    @overload
+    def add_bus(self, bus: Bus) -> Bus: ...
+    @overload
+    def add_bus(self, *buses: Bus) -> Tuple[Bus]: ...
 
     def add_bus(self, *buses: Bus):
         '''
@@ -55,18 +50,50 @@ class _PowerNetwork(object):
             if bus.index in self.a_bus_dict:
                 raise RuntimeError(f'Bus of index {bus.index} already exists.')
             self.a_bus_dict[bus.index] = bus
+            
+        self.clear_cache()
 
-        for name in _pn_cached_vars:
-            del_cache(self, name)
+        if len(buses) == 1:
+            return buses[0]
+        return buses
 
-    def add_branch(self, *branch: Branch):
-        self.a_branch.extend(branch)
+    @overload
+    def add_branch(self, branch: Branch) -> Branch: ...
+    @overload
+    def add_branch(self, *branches: Branch) -> Tuple[Branch]: ...
 
-    def add_controller_global(self, *ctrl: Controller):
-        self.a_controller_global.extend(ctrl)
+    def add_branch(self, *branches: Branch):
+        self.a_branch.extend(branches)
+        self.clear_cache()
+        if len(branches) == 1:
+            return branches[0]
+        return branches
 
-    def add_controller(self, *ctrl: Controller):
-        self.a_controller_local.extend(ctrl)
+    @overload
+    def add_controller_global(self, ctrl: Controller) -> Controller: ...
+
+    @overload
+    def add_controller_global(
+        self, *ctrls: Controller) -> Tuple[Controller]: ...
+
+    def add_controller_global(self, *ctrls: Controller):
+        self.a_controller_global.extend(ctrls)
+        if len(ctrls) == 1:
+            return ctrls[0]
+        return ctrls
+
+    @overload
+    def add_controller(self, ctrl: Controller) -> Controller: ...
+    @overload
+    def add_controller(self, *ctrls: Controller) -> Tuple[Controller]: ...
+
+    def add_controller(self, *ctrls: Controller):
+        self.a_controller_local.extend(ctrls)
+        if len(ctrls) == 1:
+            return ctrls[0]
+        return ctrls
+    
+    # properties & accessory functions
 
     @property
     def a_bus(self):
@@ -83,10 +110,29 @@ class _PowerNetwork(object):
             m[i] = len(m)
         return m
 
+    @cached_property
+    def x_equilibrium(self) -> List[FloatArray]:
+        return [self.a_bus_dict[b].component.x_equilibrium for b in self.bus_indices]
+
+    @cached_property
+    def V_equilibrium(self) -> List[complex]:
+        return [self.a_bus_dict[b].V_equilibrium or 0 for b in self.bus_indices]
+
+    @cached_property
+    def I_equilibrium(self) -> List[complex]:
+        return [self.a_bus_dict[b].I_equilibrium or 0 for b in self.bus_indices]
+
+
+    def clear_cache(self):
+        for name in _pn_cached_vars:
+            del_cache(self, name)
+
     def sort_buses(self):
         sorted_buses = dict(sorted(self.a_bus_dict.items(),
                             key=lambda item: item[1]))  # type: ignore
         self.a_bus_dict = sorted_buses
+        
+    # methods
 
     def get_admittance_matrix(self, bus_index_map: Optional[Dict[Hashable, int]] = None) -> ComplexArray:
         if not bus_index_map:
@@ -127,7 +173,8 @@ class _PowerNetwork(object):
             out = np.zeros((n * 2, 1))
             for index, i in self.bus_index_map.items():
                 bus = self.a_bus_dict[index]
-                out_i = bus.get_constraint(V[i].real, V[i].imag, P[i], Q[i]) # type: ignore
+                out_i = bus.get_constraint(
+                    V[i].real, V[i].imag, P[i], Q[i])  # type: ignore
                 out[i * 2: i * 2 + 2, :] = out_i
             return out.flatten()
 

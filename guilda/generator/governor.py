@@ -32,7 +32,7 @@ class Governor(object):
     def get_P(self, x: FloatArray, u: FloatArray):
         P: float = self.P + u[0, 0]
         dx: FloatArray = np.zeros((0, 1))
-        return (dx, P)
+        return dx, P
 
     def get_sys(self) -> SS:
         return self.sys

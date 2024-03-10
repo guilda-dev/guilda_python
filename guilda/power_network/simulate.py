@@ -12,7 +12,7 @@ from guilda.controller.controller import Controller
 
 from guilda.power_network.base import _PowerNetwork
 
-from guilda.power_network.types import BusConnect, BusFault, BusInput, SimulationOptions, SimulationResult, SimulationSegment, SimulationScenario
+from guilda.power_network.types import BusConnect, BusFault, BusInput, SimulationOptions, SimulationResult, SimulationResultComponent, SimulationSegment, SimulationScenario
 from guilda.power_network.control import get_dx_con
 
 from guilda.base import ComponentEmpty
@@ -248,24 +248,23 @@ def solve_odes(
 
         # x_k: the states of all buses
         # V_k, I_k: the states of needed buses only
-        x_dae = np.vstack([x_k, V_k[idx_sim_buses], I_k[idx_fault_buses]])
-
-        # :128
-        nVI = x_dae.shape[0] - nx
-        nI = len(cur_fault_buses) * 2
-        nV = nVI - nI
+        
+        x_dae_x = x_k
+        x_dae_V = V_k[idx_sim_buses]
+        x_dae_I = I_k[idx_fault_buses]
+        
+        nV = x_dae_V.shape[0]
+        nI = x_dae_I.shape[0]
+        nVI = nV + nI
 
         if i == 0:
             # add initial value records
-            _X = x_dae[:nx, :].T
-            _V = x_dae[nx: nx + nV, :].T @ admittance_reproduce.T
-            _I = _V @ system_admittance_float.T
             sol_list.append((
                 np.array([tstart]),
                 # x,
-                _X,
-                _V,
-                _I,
+                x_k.T,
+                V_k.T,
+                I_k.T,
             ))
 
         # define the equation
@@ -296,8 +295,9 @@ def solve_odes(
 
         # solve the equation
 
-        x_0 = x_dae.flatten()
-        dx_0 = x_0 * 0  # this will be computed by the solver
+        x_0 = np.vstack([x_dae_x, x_dae_V, x_dae_I]).flatten()
+        dx_0 = func(tstart, x_0, np.zeros(x_0.shape)) 
+        # this will partially be computed by the solver
 
         model = Implicit_Problem(func, x_0, dx_0, tstart)
         sim = IDA(model)
@@ -306,7 +306,7 @@ def solve_odes(
         sim.atol = options.atol
 
         sim.algvar = [True] * nx + [False] * nVI
-        sim.make_consistent('IDA_YA_YDP_INIT')
+        con = sim.make_consistent('IDA_YA_YDP_INIT')
         sim.display_progress = False # this one is useless, dunno if it is buggy of my fault
         
         @suppress_stdout
@@ -358,16 +358,23 @@ def solve_odes(
         V_part.append(V_all[:, idx: idx_end])
         I_part.append(I_all[:, idx: idx_end])
         idx = idx_end
+        
+    res_dict: Dict[Hashable, SimulationResultComponent] = {}
+    for key, index in bus_index_map.items():
+        res_dict[key] = SimulationResultComponent(
+            x=x_part[index],
+            V=V_part[index],
+            I=I_part[index],
+        )
 
     out = SimulationResult(
+        linear=options.linear,
+        segments=meta_list,
+        bus_index_map=bus_index_map,
         t=t_all,
         nx_bus=nx_bus,
         nu_bus=nu_bus,
-        segments=meta_list,
-        linear=options.linear,
-        x=x_part,
-        V=V_part,
-        I=I_part,
+        components=res_dict,
     )
 
     # TODO add controller data

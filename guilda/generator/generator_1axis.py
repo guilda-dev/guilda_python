@@ -11,6 +11,7 @@ from guilda.utils.typing import FloatArray
 
 from guilda.generator.generator import Generator
 
+
 class Generator1Axis(Generator):
     '''
 モデル：同期発電機の1軸モデル
@@ -27,7 +28,7 @@ class Generator1Axis(Generator):
     Args:
         Component (_type_): _description_
     '''
-    
+
     def get_self_x_name(self) -> List[str]:
         return super().get_self_x_name() + ['Eq']
 
@@ -41,17 +42,17 @@ class Generator1Axis(Generator):
         I: complex = 0,
         x: Optional[FloatArray] = None,
         u: Optional[FloatArray] = None,
-        t: float = 0) -> Tuple[FloatArray, FloatArray]:
-        
+            t: float = 0) -> Tuple[FloatArray, FloatArray]:
+
         assert x is not None
         assert u is not None
-        
+
         Xd = self.parameter.Xd
         Xdp = self.parameter.Xd_prime
         Xq = self.parameter.Xq
         Tdo = self.parameter.Tdo
         M = self.parameter.M
-        d = self.parameter.D
+        D = self.parameter.D
 
         V_abs = abs(V)
         V_angle = atan2(V.imag, V.real)
@@ -60,32 +61,34 @@ class Generator1Axis(Generator):
         omega: float = x[1, 0]
         E = x[2, 0]
 
-        V_abscos = V.real*cos(delta) + V.imag*sin(delta)
-        V_abssin = V.real*sin(delta) - V.imag*cos(delta)
+        V_abs_cos = V.real*cos(delta) + V.imag*sin(delta)
+        V_abs_sin = V.real*sin(delta) - V.imag*cos(delta)
 
-        Ir = (E-V_abscos)*sin(delta)/Xdp + V_abssin*cos(delta)/Xq
-        Ii = -(E-V_abscos)*cos(delta)/Xdp + V_abssin*sin(delta)/Xq
+        Ir = (E-V_abs_cos)*sin(delta)/Xdp + V_abs_sin*cos(delta)/Xq
+        Ii = -(E-V_abs_cos)*cos(delta)/Xdp + V_abs_sin*sin(delta)/Xq
 
         con = np.array([[I.real - Ir], [I.imag - Ii]])
 
-        Efd = Xd*E/Xdp - (Xd/Xdp - 1)*V_abscos
+        Efd = Xd*E/Xdp - (Xd/Xdp - 1)*V_abs_cos
 
         # スカラーを返す
         dx_avr, dx_pss, dx_gov, \
-        Vfd, P = self.get_components_dx(x, u, omega, V_abs, Efd)
+            Vfd, P_mech = self.get_components_dx(x, u, omega, V_abs, Efd)
 
         dE = (-Efd + Vfd)/Tdo
         dDelta: float = self.omega0*omega
-        dOmega: float = (P - d*omega - V_abs*E*sin(delta-V_angle)/Xdp +
-                  V_abs**2*(1/Xdp-1/Xq)*sin(2*(delta-V_angle))/2)/M
+        dOmega: float = (
+            P_mech
+            - D*omega
+            - V_abs*E*sin(delta-V_angle)/Xdp
+            + V_abs**2*(1/Xdp-1/Xq)*sin(2*(delta-V_angle))/2
+        )/M
 
         dx_gen = [[dDelta], [dOmega], [dE]]
 
         dx = np.vstack((dx_gen, dx_avr, dx_pss, dx_gov))
 
         return dx, con
-
-
 
     def get_linear_matrix(self, V: complex = 0, x: Optional[FloatArray] = None) -> StateEquationRecord:
         if (x is None or not any(x)) and V is None:
@@ -99,22 +102,26 @@ class Generator1Axis(Generator):
 
         omega0 = self.omega0
         Xd = self.parameter.Xd
-        Xdp = self.parameter.Xd_prime 
-        Xq = self.parameter.Xq 
+        Xdp = self.parameter.Xd_prime
+        Xq = self.parameter.Xq
         Tdo = self.parameter.Tdo
-        M = self.parameter.M 
-        d = self.parameter.D 
+        M = self.parameter.M
+        d = self.parameter.D
 
-        A_swing = np.array([[0, omega0, 0],
-                            [0, -d/M,   0],
-                            [0, 0,      0]])
+        A_swing = np.array([
+            [0, omega0, 0],
+            [0, -d/M,   0],
+            [0, 0,      0]
+        ])
         # u1 = Pmech
         # u2 = Vfd
         # u3 = Pout
         # u4 = Efd
-        B_swing = np.array([[0,   0,     0,    0],
-                            [1/M, 0,     -1/M, 0],
-                            [0,   1/Tdo, 0,    -1/Tdo]])
+        B_swing = np.array([
+            [0,   0,     0,    0],
+            [1/M, 0,     -1/M, 0],
+            [0,   1/Tdo, 0,    -1/Tdo]
+        ])
 
         # y1 = delta
         # y2 = omega
@@ -241,30 +248,30 @@ class Generator1Axis(Generator):
         SS.set_outputs(ss_closed, system_outputs)
 
         # ret_uの作成
-        
+
         idx_u_avr: Union[int, None] = SS.find_input(ss_closed, 'u_avr')
         idx_u_gov: Union[int, None] = SS.find_input(ss_closed, 'u_governor')
         idx_u_vrin: Union[int, None] = SS.find_input(ss_closed, 'Vrin')
         idx_u_viin: Union[int, None] = SS.find_input(ss_closed, 'Viin')
-        
+
         assert idx_u_avr is not None
         assert idx_u_gov is not None
         assert idx_u_viin is not None
         assert idx_u_vrin is not None
-        
-        _A: FloatArray = ss_closed.A # type: ignore
-        _B: FloatArray = ss_closed.B # type: ignore
-        _C: FloatArray = ss_closed.C # type: ignore
-        _D: FloatArray = ss_closed.D # type: ignore
-        
+
+        _A: FloatArray = ss_closed.A  # type: ignore
+        _B: FloatArray = ss_closed.B  # type: ignore
+        _C: FloatArray = ss_closed.C  # type: ignore
+        _D: FloatArray = ss_closed.D  # type: ignore
+
         A = _A
         B = _B[:, idx_u_avr: idx_u_gov + 1]
         C = _C
         D = _D[:, idx_u_avr: idx_u_gov + 1]
-        
+
         BV = _B[:, idx_u_vrin: idx_u_viin + 1]
         DV = _D[:, idx_u_vrin: idx_u_viin + 1]
-        
+
         BI = np.zeros([A.shape[0], 2])
         DI = -np.identity(2)
         R = np.array([[]]).reshape(self.nx, -1)
@@ -277,18 +284,17 @@ class Generator1Axis(Generator):
             R=R, S=S
         )
 
-    
     def get_self_equilibrium(self, V: complex, I: complex):
-        
+
         V_abs = abs(V)
         V_angle = phase(V)
         Pow = I.conjugate() * V
         P = Pow.real
         Q = Pow.imag
 
-        Xd = self.parameter.Xd 
-        Xdp = self.parameter.Xd_prime 
-        Xq = self.parameter.Xq 
+        Xd = self.parameter.Xd
+        Xdp = self.parameter.Xd_prime
+        Xq = self.parameter.Xq
 
         delta = V_angle + atan(P/(Q+(V_abs**2)/Xq))
         Enum = V_abs**4 + Q**2*Xdp*Xq + Q*V_abs**2*Xdp + Q*V_abs**2*Xq + P**2*Xdp*Xq
@@ -296,7 +302,7 @@ class Generator1Axis(Generator):
         E = Enum/Eden
 
         Vfd = Xd*E/Xdp - (Xd/Xdp-1)*V_abs*cos(delta-V_angle)
-        
+
         x_gen = np.array([[delta], [0], [E]])
-        
-        return  x_gen, Vfd
+
+        return x_gen, Vfd

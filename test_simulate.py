@@ -16,7 +16,40 @@ np.set_printoptions(
 
 # net2 = sample.IEEE68bus()
 
-net = sample.simple_3_bus_nishino(True, generator_model=Generator1Axis)
+# net = sample.simple_3_bus_nishino(
+#     True, 
+#     # generator_model=Generator
+# )
+
+# scenario = SimulationScenario(
+#     tstart=0, 
+#     tend=60,
+#     u=[
+#         BusInput(
+#             index=3,
+#             time=[0, 10, 20, 60],
+#             value=np.array([
+#                 [0, 0.05, 0.1, 0.1],
+#                 [0,    0,   0,   0],
+#             ]).T,
+#         )
+#     ]
+# )
+
+
+net = sample.simple_2_bus_moris(
+    generator_model=Generator
+)
+
+scenario = SimulationScenario(
+    tstart = 0,
+    tend = 20,
+    dx_init_sys={
+        1: np.array([np.pi / 6, 0]).reshape((-1, 1))
+    }
+)
+
+
 net.initialize()
 
 Y = net.get_admittance_matrix()
@@ -24,20 +57,6 @@ V, I = net.calculate_power_flow()
 
 net.print_bus_state()
 
-scenario = SimulationScenario(
-    tstart=0, 
-    tend=60,
-    u=[
-        BusInput(
-            index=3,
-            time=[0, 10, 20, 60],
-            value=np.array([
-                [0, 0.05, 0.1, 0.1],
-                [0,    0,   0,   0],
-            ]).T,
-        )
-    ]
-)
 
 options = SimulationOptions(
     linear=False,
@@ -50,8 +69,8 @@ result = net.simulate(
     options
 )
 
-plt.plot(result.t, result.x[0][:, 1], label="rotator angle difference")
-plt.plot(result.t, result.x[1][:, 1], label="rotator angle difference")
+plt.plot(result.t, result[1].x[:, 1], label="rotator angle difference")
+plt.plot(result.t, result[2].x[:, 1], label="rotator angle difference")
 plt.legend()
 plt.show()
 

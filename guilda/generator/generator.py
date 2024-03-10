@@ -139,11 +139,12 @@ Actually, it is the classical model
         Efd = 0
 
         dx_avr, dx_pss, dx_gov, \
-            Vfd, P = self.get_components_dx(x, u, omega, V_abs, Efd)
+            Vfd, P_mech = self.get_components_dx(x, u, omega, V_abs, Efd)
 
         Xd = self.parameter.Xd
         Xq = self.parameter.Xq
-        d = self.parameter.D
+        M = self.parameter.M
+        D = self.parameter.D
 
         Vd = V.real * sin(delta) - V.imag * cos(delta)
         Vq = V.real * cos(delta) + V.imag * sin(delta)
@@ -154,7 +155,7 @@ Actually, it is the classical model
         Ii = -Id * cos(delta) + Iq * sin(delta)
 
         dDelta = self.omega0 * omega
-        dOmega = P - d * omega - Vq * Iq - Vd * Id
+        dOmega = (P_mech - D * omega - Vq * Iq - Vd * Id) / M
 
         con = np.array([[I.real - Ir], [I.imag - Ii]])
 
@@ -233,4 +234,4 @@ Actually, it is the classical model
         self.alpha_st = np.array([P, Vfd, V_abs]).reshape(-1, 1)
 
         self._x_eq = x_st
-        del_cache(self, nameof(self.system_matrix))
+        del_cache(self, nameof(Generator.system_matrix))

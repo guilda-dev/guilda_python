@@ -40,10 +40,10 @@ class Bus(ABC):
             raise TypeError("must be a child of component")
         
         self.component = component
-        if not self.V_equilibrium or not self.I_equilibrium:
-            return
+        if self.V_equilibrium is not None and self.I_equilibrium is not None:
+            self.component.set_equilibrium(self.V_equilibrium, self.I_equilibrium)
         
-        self.component.set_equilibrium(self.V_equilibrium, self.I_equilibrium)
+        return component
 
             
     def set_shunt(self, shunt: complex):
