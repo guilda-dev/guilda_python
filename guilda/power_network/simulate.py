@@ -1,5 +1,6 @@
 # pylint: disable=W0640
 
+from collections import defaultdict
 import numpy as np
 
 from functools import reduce
@@ -11,48 +12,136 @@ from guilda.bus.bus import Bus
 from guilda.controller.controller import Controller
 
 from guilda.power_network.base import _PowerNetwork
+from guilda.power_network.segment import gen_segments, parse_scenario
 
-from guilda.power_network.types import BusConnect, BusFault, BusInput, SimulationOptions, SimulationResult, SimulationResultComponent, SimulationSegment, SimulationScenario
-from guilda.power_network.control import get_dx_con
+from guilda.power_network.types import BusConnect, BusEvent, BusFault, BusInput, SimulationMetadata, SimulationOptions, SimulationResult, SimulationResultComponent, SimulationSegment, SimulationScenario
+from guilda.power_network.dae import get_dx_con
 
 from guilda.base import ComponentEmpty
 
 from guilda.utils.calc import complex_mat_to_float
-from guilda.utils.data import complex_arr_to_col_vec
+from guilda.utils.data import complex_arr_to_col_vec, sep_col_vec
 from guilda.utils.runtime import suppress_stdout
 from guilda.utils.typing import ComplexArray, FloatArray
 
 from assimulo.problem import Implicit_Problem
 from assimulo.solvers import IDA
 
-def reduce_admittance_matrix(Y: ComplexArray, index: Iterable[int]) -> Tuple[
-    ComplexArray,
-    FloatArray,
-    ComplexArray,
-    FloatArray
-]:
 
-    n_bus = Y.shape[0]
-    reduced = np.array([i not in index for i in range(n_bus)])
-    n_reduced = np.logical_not(reduced)
 
-    Y11 = Y[n_reduced][:, n_reduced]
-    Y12 = Y[n_reduced][:, reduced]
-    Y21 = Y[reduced][:, n_reduced]
-    Y22 = Y[reduced][:, reduced]
+def augment_2(input_lst: List[int]):
+    return reduce(
+        lambda x, y: [*x, *y], 
+        [[x * 2, x * 2 + 1] for x in input_lst],
+        []
+    )
 
-    Y_reduced = Y11 - Y12 @ np.linalg.inv(Y22) @ Y21
-    Y_mat_reduced = complex_mat_to_float(Y_reduced)
+def solve_dae(
+    segment: SimulationSegment,
+    meta: SimulationMetadata,
+    options: SimulationOptions,
+    
+    x_init: FloatArray, # col vec
+    V_init: FloatArray, # col vec
+    I_init: FloatArray, # col vec
+    
+    dy_init: Optional[FloatArray] = None,
+    e: Optional[Callable[[float], None]] = None,
+):
+    
+    idx_sim_buses = augment_2(segment.buses_simulated)
+    idx_fault_buses = augment_2(segment.buses_fault)
 
-    nr_n_reduced = int(np.sum(n_reduced))
+    nx = x_init.shape[0]
+    nV = len(idx_sim_buses)
+    nI = len(idx_fault_buses)
+    nVI = nV + nI
+    
+    y_init = np.vstack([
+        x_init,
+        V_init[idx_sim_buses],
+        I_init[idx_fault_buses],
+    ]).flatten()
 
-    A_reproduce: ComplexArray = np.zeros((n_bus, nr_n_reduced), dtype=complex)
-    A_reproduce[n_reduced] = np.eye(nr_n_reduced)
-    A_reproduce[reduced] = -np.linalg.inv(Y22) @ Y21
+    # define the equation
 
-    A_mat_reproduce = complex_mat_to_float(A_reproduce)
+    def func(
+        t: float,
+        y: FloatArray,
+        dy: FloatArray,
+    ):
 
-    return Y_reduced, Y_mat_reduced, A_reproduce, A_mat_reproduce
+        dx_calc, con = get_dx_con(
+            
+            t, 
+            y.reshape((-1, 1)), 
+            
+            options.linear,
+            meta.buses, meta.ctrls_global, meta.ctrls, 
+            meta.ctrls_global_indices, meta.ctrls_indices,
+            
+            meta.nx_bus, meta.nx_ctrl_global, meta.nx_ctrl, meta.nu_bus,
+            
+            
+            lambda t, i: segment.buses_input[i](t).reshape((-1, 1)), 
+            list(segment.buses_input.keys()), 
+            segment.buses_fault,
+            segment.buses_simulated,
+            
+            segment.admittance_reduced,
+        )
+
+        n = dx_calc.size
+
+        # event reporter
+        if e:
+            e(t)
+
+        ret = np.concatenate([dx_calc.flatten() - dy[:n], con.flatten()])
+        return ret
+
+    # solve the equation
+    if dy_init is None:
+        dy_init = func(segment.time_start, y_init, np.zeros(y_init.shape))
+    # this will partially be computed by the solver
+
+    model = Implicit_Problem(func, y_init, dy_init, segment.time_start)
+    sim = IDA(model)
+
+    sim.rtol = options.rtol
+    sim.atol = options.atol
+
+    sim.algvar = [True] * nx + [False] * nVI
+    con = sim.make_consistent('IDA_YA_YDP_INIT')
+    sim.display_progress = False  # this one is useless, dunno if it is buggy of my fault
+
+    @suppress_stdout
+    def s():
+        return sim.simulate(segment.time_end)
+
+    t_sol, y_orig, dy = s()
+    y = y_orig.T
+
+    # concatenate results
+
+    t = t_sol[0:]
+    X = y[:nx, :].T
+    V = y[nx: nx + nV, :].T @ segment.admittance_reproduce.T
+    I = V @ meta.system_admittance_f.T
+    
+    I[:, idx_fault_buses] = y[nx + nV:, :].T
+    
+    solution = (t, X, V, I)
+
+    # prepare for the next scenario
+
+    x_k = X[-1:].T
+    V_k = V[-1:].T
+    I_k = I[-1:].T
+    
+    sol_end = (x_k, V_k, I_k)
+    
+    return solution, sol_end
 
 
 def simulate(
@@ -64,319 +153,96 @@ def simulate(
     # process options
     if options is None:
         options = SimulationOptions()
-
-    bus_index_map, init_states, timestamps, events = scenario.parse(self)
-
-    bus = [self.a_bus_dict[i] for i in bus_index_map]
-
-    controllers_global = self.a_controller_global
-    controllers = self.a_controller_local
-    Y = self.get_admittance_matrix()
-
-    out = solve_odes(
-        bus,
-        bus_index_map,
-        controllers_global,
-        controllers,
-        Y,
-        timestamps,
-        *init_states,
-        events,
-        scenario,
-        options
-    )
-
-    return out
-
-
-def solve_odes(
-    buses: List[Bus],
-    bus_index_map: Dict[Hashable, int],
-    ctrls_global: List[Controller],
-    ctrls: List[Controller],
-    system_admittance: ComplexArray,
-
-    t: List[float],
     
-    x_init_bus: List[FloatArray],
-    x_init_kg: List[FloatArray],
-    x_init_k: List[FloatArray],
-    V_init: List[complex],
-    I_init: List[complex],
-
-    events: Dict[float, List[Tuple[object, int, bool]]],
-    scenario: SimulationScenario, 
-    options: SimulationOptions  # only used for initializing solver
-):
+    meta, init_states, timestamps, events = parse_scenario(scenario, self)
+    # TODO process timestamps
     
-    # build controller index map
+    segments = gen_segments(meta, timestamps, events)
     
-    ctrls_global_indices = [
-        (
-            [bus_index_map[x] for x in c.index_observe],
-            [bus_index_map[x] for x in c.index_input]
-        ) for c in ctrls_global
-    ]
-    ctrls_indices = [
-        (
-            [bus_index_map[x] for x in c.index_observe],
-            [bus_index_map[x] for x in c.index_input]
-        ) for c in ctrls
-    ]
-
-    # :27
-
-    nx_bus = [b.nx for b in buses]
-    nu_bus = [b.nu for b in buses]
-    nx_kg = [c.nx for c in ctrls_global]
-    nx_k = [c.nx for c in ctrls]
-
-    idx_empty_buses = [i for i, b in enumerate(
-        buses) if isinstance(b.component, ComponentEmpty)]
-
-    idx_controlled_buses: List[int] = sorted(list(set(reduce(
-        lambda x, y: x + y[0] + y[1], 
-        ctrls_global_indices + ctrls_indices,
-        []
-    ))))
     
-    # idx_controlled_buses: unique pairs of observe-input indices
-
-    system_admittance_float = complex_mat_to_float(system_admittance)
-
-    t_simulated = t
-
-    # :45
-    # store simulation result
+    # solve
+    
 
     sol_list: List[Tuple[FloatArray, FloatArray,
-                     FloatArray, FloatArray]] = []  # (t, x)[]
-    meta_list: List[SimulationSegment] = []
-
-    # initial condition
-
+                         FloatArray, FloatArray]] = []  # (t, x)[]
+    
+    x_init_bus, x_init_kg, x_init_k, V_init, I_init = init_states
     x_k: FloatArray = np.vstack(x_init_bus + x_init_kg + x_init_k)
     V_k: FloatArray = complex_arr_to_col_vec(np.array(V_init))
     I_k: FloatArray = complex_arr_to_col_vec(np.array(I_init))
-
-    # shape etc.
-
-    nx = x_k.size
-
-    # define p-bar
-
-    progress_bar = tqdm(total=1)
-
-    progress_bar.update(0)
-    ti = t_simulated[0]
-    tf = t_simulated[-1]
     
-    # event recorders
-    idx_with_input: Set[int] = set()
-    input_functions: Dict[int, Callable[[float], FloatArray]] = {}
-    idx_with_fault: Set[int] = set()
-    idx_disconnected: Set[int] = set()
-
-    def get_input(t: float, i: int):
-        ret = input_functions[i](t).reshape((-1, 1))
-        return ret
-
-    # in each time span
-    for i in range(len(t_simulated) - 1):
-
-        tstart, tend = t_simulated[i: i + 2]
+    # add init condition
+    sol_list.append((
+        np.array([segments[0].time_start if segments else 0,]),
+        x_k.T,
+        V_k.T,
+        I_k.T,
+    ))
+    
+    progress_bar = tqdm(total = 1)
+    min_time = np.min(timestamps)
+    max_time = np.max(timestamps)
+    
+    def set_progress_bar(t: float):
+        val = (t - min_time) / (max_time - min_time)
+        progress_bar.update(val - progress_bar.n)
+    
+    for segment in segments:
         
-        # handle events
-        for e in events[tstart]:
-            obj, index, flag = e
+        # solve
+        solution, sol_end = solve_dae(
+            segment,
+            meta,
+            options,
+            x_k,
+            V_k,
+            I_k,
             
-            # input
-            if isinstance(obj, BusInput):
-                b_index = bus_index_map[obj.index]
-                if flag:
-                    idx_with_input.add(b_index)
-                    if callable(obj.value):
-                        input_functions[b_index] = obj.value
-                    else:
-                        input_functions[b_index] = obj.get_interp()
-                elif b_index in idx_with_input:
-                    idx_with_input.remove(b_index)
-                    
-            # fault
-            if isinstance(obj, BusFault):
-                b_index = bus_index_map[obj.index]
-                if flag:
-                    idx_with_fault.add(b_index)
-                elif b_index in idx_with_fault:
-                    idx_with_fault.remove(b_index)
-                    
-            # connection
-            # TODO install
-            if isinstance(obj, BusConnect):
-                b_index = bus_index_map[obj.index]
-                if flag:
-                    idx_disconnected.add(b_index)
-                elif b_index in idx_disconnected:
-                    idx_disconnected.remove(b_index)
-                
-
-        cur_fault_buses = sorted(list(idx_with_fault))
-        u_indices = sorted(list(idx_with_input))
-
-        must_include_buses = set(list(cur_fault_buses) + idx_controlled_buses)
-
-        # (all buses that are empty but neither faulted nor controlled) are excluded
-        # TODO assume that this step is only for the reduction of computation...
-        cur_sim_buses = sorted(set(range(len(buses))) -
-                               (set(idx_empty_buses) - must_include_buses))
-
-        _, admittance_reduced, __, admittance_reproduce \
-            = reduce_admittance_matrix(system_admittance, cur_sim_buses)
-
-        meta = SimulationSegment(
-            time_start=tstart,
-            time_end=tend,
-            simulated_buses=cur_sim_buses,
-            fault_buses=cur_fault_buses,
-            admittance=admittance_reproduce,
+            e = set_progress_bar,
         )
-
-        idx_sim_buses: List[int] = [
-            2 * x for x in cur_sim_buses] + [2 * x + 1 for x in cur_sim_buses]
-        idx_fault_buses: List[int] = reduce(
-            lambda x, y: [*x, *y], [[x * 2, x * 2 + 1] for x in cur_fault_buses] + [[]])
-
-        # x_k: the states of all buses
-        # V_k, I_k: the states of needed buses only
         
-        x_dae_x = x_k
-        x_dae_V = V_k[idx_sim_buses]
-        x_dae_I = I_k[idx_fault_buses]
+        # post process
+        x_k, V_k, I_k = sol_end
+        set_progress_bar(segment.time_end)
+        sol_list.append(solution)
         
-        nV = x_dae_V.shape[0]
-        nI = x_dae_I.shape[0]
-        nVI = nV + nI
-
-        if i == 0:
-            # add initial value records
-            sol_list.append((
-                np.array([tstart]),
-                # x,
-                x_k.T,
-                V_k.T,
-                I_k.T,
-            ))
-
-        # define the equation
-
-        def func(
-            t: float,
-            x: FloatArray,
-            dx: FloatArray,
-        ):
-
-            dx_calc, con = get_dx_con(
-                options.linear,
-                buses, ctrls_global, ctrls, ctrls_global_indices, ctrls_indices, 
-                admittance_reduced,
-                nx_bus, nx_kg, nx_k, nu_bus,
-                t, x.reshape(
-                    (-1, 1)), get_input, u_indices, cur_fault_buses, cur_sim_buses
-            )
-
-            n = dx_calc.size
-
-            # TODO add reporter?
-            progress_val = (t - ti) / (tf - ti)
-            progress_bar.update(progress_val - progress_bar.n)
-
-            ret = np.concatenate([dx_calc.flatten() - dx[:n], con.flatten()])
-            return ret
-
-        # solve the equation
-
-        x_0 = np.vstack([x_dae_x, x_dae_V, x_dae_I]).flatten()
-        dx_0 = func(tstart, x_0, np.zeros(x_0.shape)) 
-        # this will partially be computed by the solver
-
-        model = Implicit_Problem(func, x_0, dx_0, tstart)
-        sim = IDA(model)
-        
-        sim.rtol = options.rtol
-        sim.atol = options.atol
-
-        sim.algvar = [True] * nx + [False] * nVI
-        con = sim.make_consistent('IDA_YA_YDP_INIT')
-        sim.display_progress = False # this one is useless, dunno if it is buggy of my fault
-        
-        @suppress_stdout
-        def s():
-            return sim.simulate(tend)
-        
-        t_sol, y_orig, dy = s()
-        y = y_orig.T
-        
-        
-        # concatenate results
-
-        X = y[:nx, :].T
-        V = y[nx: nx + nV, :].T @ admittance_reproduce.T
-        I = V @ system_admittance_float.T
-
-        x_k = X[-1:].T
-        V_k = V[-1:].T
-        I_k = I[-1:].T
-
-        i_fault = np.array([
-            [x * 2, x * 2 + 1] for x in cur_fault_buses
-        ], dtype=int)  # (n_fault, 2)
-        I[:, i_fault.flatten()] = y[nx + nV:, :].T
-
-        if options.save_solution:
-            meta.solution = (t_sol, y_orig, dy)
-
-        meta_list.append(meta)
-        sol_list.append((t_sol[0:], X, V, I))
-
+    progress_bar.close()
+    
+    # concatenate solutions
+    
     t_all, x_all, V_all, I_all = [
         np.concatenate([x[i] for x in sol_list]) if i == 0 else np.vstack(
             [x[i] for x in sol_list])
         for i in range(4)
     ]
 
-    progress_bar.update(1)
-    progress_bar.close()
+    x_part_all = sep_col_vec(x_all.T, meta.nx_bus + meta.nx_ctrl_global + meta.nx_ctrl)
+    i1 = len(meta.nx_bus)
+    i2 = len(meta.nx_bus) + len(meta.nx_ctrl_global)
+    x_part_sys = x_part_all[:i1]
+    x_part_ctrl_global = x_part_all[i1:i2]
+    x_part_ctrl = x_part_all[i2:]
+    V_part = V_all.reshape((t_all.size, -1, 2))
+    I_part = I_all.reshape((t_all.size, -1, 2))
 
-    x_part: List[FloatArray] = []
-    V_part: List[FloatArray] = []
-    I_part: List[FloatArray] = []
 
-    idx = 0
-    for nx in nx_bus:
-        idx_end = idx + nx
-        x_part.append(x_all[:, idx: idx_end])
-        V_part.append(V_all[:, idx: idx_end])
-        I_part.append(I_all[:, idx: idx_end])
-        idx = idx_end
-        
     res_dict: Dict[Hashable, SimulationResultComponent] = {}
-    for key, index in bus_index_map.items():
+    for key, index in meta.bus_index_map.items():
         res_dict[key] = SimulationResultComponent(
-            x=x_part[index],
-            V=V_part[index],
-            I=I_part[index],
+            x=x_part_sys[index].T,
+            V=V_part[:, index],
+            I=I_part[:, index],
         )
 
     out = SimulationResult(
-        linear=options.linear,
-        segments=meta_list,
-        bus_index_map=bus_index_map,
+        options=options,
+        meta=meta,
+        segments=segments,
         t=t_all,
-        nx_bus=nx_bus,
-        nu_bus=nu_bus,
         components=res_dict,
+        ctrls_global=x_part_ctrl_global,
+        ctrls=x_part_ctrl
     )
 
-    # TODO add controller data
-
     return out
+

@@ -4,15 +4,21 @@ from collections import defaultdict
 from typing import List, Tuple, Union, Literal, Any, Dict, Hashable, Callable, Optional, cast
 import numpy as np
 from scipy.interpolate import interp1d
+from guilda.bus.bus import Bus
+from guilda.controller.controller import Controller
 
 from guilda.power_network.base import _PowerNetwork
 from guilda.utils.typing import FloatArray, ComplexArray
 
 
 @dataclass
-class BusInput:
-
+class BusEvent:
     index: Hashable = None
+
+
+@dataclass
+class BusInput(BusEvent):
+
     time: List[float] = field(default_factory=list)
     type: Optional[str] = None
     value: FloatArray | Callable[[float], FloatArray] = field(
@@ -39,16 +45,14 @@ class BusInput:
 
 
 @dataclass
-class BusFault:
+class BusFault(BusEvent):
 
-    index: Hashable = None
     time: Tuple[float, float] = (0, 0)
 
 
 @dataclass
-class BusConnect:
+class BusConnect(BusEvent):
 
-    index: Hashable = None
     time: float = 0
     disconnect: bool = False
 
@@ -74,95 +78,12 @@ class SimulationScenario:
     fault: List[BusFault] = field(default_factory=list)
     conn: List[BusConnect] = field(default_factory=list)
 
-    def parse(self, pn: _PowerNetwork):
-
-        bus_index_map = pn.bus_index_map
-
-        # get default states from network
-
-        x0_sys = pn.x_equilibrium or []
-        V0 = pn.V_equilibrium or []
-        I0 = pn.I_equilibrium or []
-
-        x0_con_local = [c.get_x0() for c in pn.a_controller_local]
-        x0_con_global = [c.get_x0() for c in pn.a_controller_global]
-
-        # apply custom states
-
-        for index, x in self.x_init_sys.items():
-            x0_sys[bus_index_map[index]] = x
-
-        for index, x in self.V_init.items():
-            V0[bus_index_map[index]] = x
-
-        for index, x in self.I_init.items():
-            I0[bus_index_map[index]] = x
-
-        for index, x in self.x_init_ctrl_global.items():
-            x0_con_global[index] = x
-
-        for index, x in self.x_init_ctrl.items():
-            x0_con_local[index] = x
-
-        # apply custom difference
-
-        for index, x in self.dx_init_sys.items():
-            x0_sys[bus_index_map[index]] += x
-
-        for index, x in self.dx_init_ctrl_global.items():
-            x0_con_global[index] += x
-
-        for index, x in self.dx_init_ctrl.items():
-            x0_con_local[index] += x
-
-        # check timestamps and build event record
-
-        timestamps = set([self.tstart, self.tend])
-        events: Dict[float, List[Tuple[object, int, bool]]] = defaultdict(list)
-        events[self.tstart] = []
-        events[self.tend] = []
-
-        # input
-        for i, u in enumerate(self.u):
-            t_count = 0
-            t_min = np.Infinity
-            t_max = -np.Infinity
-            for _t in u.time:
-                timestamps.add(_t)
-                events[_t] = []
-                t_count += 1
-                t_min = min(t_min, _t)
-                t_max = max(t_max, _t)
-            # san check
-            if t_count < 2:
-                raise RuntimeError('Invalid input time duration.')
-            if u.value is None:
-                raise RuntimeError('Empty input record.')
-            events[t_min].append((u, i, True))
-            events[t_max].append((u, i, False))
-
-        # fault
-        for i, f in enumerate(self.fault):
-            t_min, t_max = f.time
-            if t_max <= t_min:
-                raise RuntimeError('Invalid input time duration.')
-
-            events[t_min].append((f, i, True))
-            events[t_max].append((f, i, False))
-
-        for i, c in enumerate(self.conn):
-            events[c.time].append((c, i, not c.disconnect))
-
-        timestamp_list = list(timestamps)
-        timestamp_list.sort()
-
-        return bus_index_map, (x0_sys, x0_con_global, x0_con_local, V0, I0), timestamp_list, dict(events)
-
 
 @dataclass
 class SimulationOptions:
 
     linear: bool = False
+    strict_duration: bool = False  # TODO
     solver_method: str = 'ida'
 
     atol: float = 1e-8
@@ -178,17 +99,38 @@ class SimulationOptions:
 
 
 @dataclass
+class SimulationMetadata:
+
+    buses: List[Bus]
+    bus_index_map: Dict[Hashable, int]
+
+    ctrls_global: List[Controller]
+    ctrls: List[Controller]
+    ctrls_global_indices: List[Tuple[List[int], List[int]]]
+    ctrls_indices: List[Tuple[List[int], List[int]]]
+
+    nx_bus: List[int]
+    nu_bus: List[int]
+    nx_ctrl_global: List[int]
+    nx_ctrl: List[int]
+
+    system_admittance: ComplexArray
+    system_admittance_f: FloatArray
+
+
+@dataclass
 class SimulationSegment:
 
-    time_start: float = 0
-    time_end: float = 0
+    time_start: float
+    time_end: float
 
-    simulated_buses: List[int] = field(default_factory=list)
-    fault_buses: List[int] = field(default_factory=list)
+    buses_simulated: List[int]
+    buses_fault: List[int]
+    buses_input: Dict[int, Callable[[float], FloatArray]]
+    buses_disconnect: List[int]  # TODO
 
-    admittance: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))
-
-    solution: Any = None
+    admittance_reduced: FloatArray
+    admittance_reproduce: FloatArray
 
 
 EMPTY_ARR = np.zeros((0, 0))
@@ -205,17 +147,15 @@ class SimulationResultComponent:
 @dataclass
 class SimulationResult:
 
-    linear: bool = True
+    options: SimulationOptions
 
-    segments: List[SimulationSegment] = field(default_factory=list)
-    bus_index_map: Dict[Hashable, int] = field(default_factory=dict)
+    meta: SimulationMetadata
+    segments: List[SimulationSegment]
 
-    nx_bus: List[int] = field(default_factory=list)
-    nu_bus: List[int] = field(default_factory=list)
-
-    t: FloatArray = field(default_factory=lambda: np.zeros((0,)))
-    components: Dict[Hashable, SimulationResultComponent] = field(
-        default_factory=dict)
+    t: FloatArray
+    components: Dict[Hashable, SimulationResultComponent]
+    ctrls_global: List[FloatArray]
+    ctrls: List[FloatArray]
 
     def __getitem__(self, x: Hashable):
         return self.components[x]

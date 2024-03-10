@@ -8,6 +8,10 @@ from guilda.utils.typing import FloatArray
 
 
 def get_dx_con(
+
+    t: float,
+    y: FloatArray,
+    
     linear: bool,
 
     buses: List[Bus],
@@ -17,20 +21,17 @@ def get_dx_con(
     ctrls_global_indices: List[Tuple[List[int], List[int]]],
     ctrls_indices: List[Tuple[List[int], List[int]]],
 
-    reduced_admittance: FloatArray,
-
     nx_bus: List[int],
     nx_ctrl_global: List[int],
     nx_ctrl: List[int],
     nu_bus: List[int],
-
-    t: float,
-    xVI_all: FloatArray,
     u_all: Callable[[float, int], FloatArray],
     u_indices: List[int],  # only these inputs are not 0
 
     fault_buses: List[int],
     simulated_buses: List[int],
+
+    reduced_admittance: FloatArray,
 ):
 
     # separate x, V, I
@@ -42,18 +43,18 @@ def get_dx_con(
     n_v_sim_buses = 2 * len(simulated_buses)
     n_i_fault_buses = 2 * len(fault_buses)
 
-    x = xVI_all[0: n1]
-    xkg = xVI_all[n1: n1 + n2]
-    xk = xVI_all[n1 + n2: n1 + n2 + n3]
+    x = y[0: n1]
+    xkg = y[n1: n1 + n2]
+    xk = y[n1 + n2: n1 + n2 + n3]
 
     nx_buses_and_ctrls = n1 + n2 + n3
     
-    V_flattened = xVI_all[nx_buses_and_ctrls: nx_buses_and_ctrls + n_v_sim_buses]
+    V_flattened = y[nx_buses_and_ctrls: nx_buses_and_ctrls + n_v_sim_buses]
     
     V_arr = np.reshape(V_flattened, (-1, 2)).T # each row is [real, imag]
     
     I_fault_arr = np.reshape(
-        xVI_all[nx_buses_and_ctrls + n_v_sim_buses: nx_buses_and_ctrls + n_v_sim_buses + n_i_fault_buses], 
+        y[nx_buses_and_ctrls + n_v_sim_buses: nx_buses_and_ctrls + n_v_sim_buses + n_i_fault_buses], 
         (-1, 2)
     ).T
 
@@ -109,7 +110,7 @@ def get_dx_con(
     dx_ctrls = [np.zeros((0, 0))] * len(ctrls)
 
     for i, c in enumerate(ctrls):
-        i_observe, i_input = ctrls_global_indices[i]
+        i_observe, i_input = ctrls_indices[i]
         f = c.get_dx_u_func(linear)
         dx_ctrls[i], u_ctrl = f(
             V_all[:, i_observe], I_all[:, i_observe],
