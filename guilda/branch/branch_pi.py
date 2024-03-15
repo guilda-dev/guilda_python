@@ -17,11 +17,8 @@ class BranchPi(Branch):
 restrictions: SetAccess = public
     '''
 
-    def __init__(self, from_: int, to: int, z: complex, y: float):
-        super().__init__(from_, to)
-
-        self.z: complex = z
-        self.y: float = y
+    def __init__(self, bus1: int, bus2: int, z: complex, y: float):
+        super().__init__(bus1, bus2, z, y)
 
     def get_admittance_matrix(self) -> ComplexArray:
         z = self.z

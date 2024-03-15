@@ -112,7 +112,7 @@ class _PowerNetwork(object):
 
     @cached_property
     def x_equilibrium(self) -> List[FloatArray]:
-        return [self.a_bus_dict[b].component.x_equilibrium for b in self.bus_indices]
+        return [np.array(self.a_bus_dict[b].component.x_equilibrium) for b in self.bus_indices]
 
     @cached_property
     def V_equilibrium(self) -> List[complex]:
@@ -200,6 +200,7 @@ class _PowerNetwork(object):
     def initialize(self):
         V, I = self.calculate_power_flow()
         self.set_equilibrium(V, I)
+        self.clear_cache()
 
     def get_sys(self):
 

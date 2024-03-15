@@ -1,10 +1,12 @@
 import numpy as np
+import pickle
+import matplotlib.pyplot as plt
+
+
 from guilda.generator import Generator, Generator1Axis
 from guilda.power_network import SimulationOptions
 
 import guilda.models as sample
-
-import matplotlib.pyplot as plt
 
 from guilda.power_network.types import BusInput, SimulationScenario
 
@@ -75,3 +77,4 @@ plt.legend()
 plt.show()
 
 print(result)
+

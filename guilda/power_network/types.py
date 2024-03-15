@@ -133,10 +133,6 @@ class SimulationSegment:
     admittance_reproduce: FloatArray
 
 
-EMPTY_ARR = np.zeros((0, 0))
-EMPTY_ARR.setflags(write=False)
-
-
 @dataclass
 class SimulationResultComponent:
     x: FloatArray = field(default_factory=lambda: np.zeros((0, 0)))

@@ -26,6 +26,10 @@ Actually, it is the classical model
     @property
     def x_equilibrium(self) -> FloatArray:
         return self._x_eq
+    
+    @property
+    def u_equilibrium(self) -> FloatArray:
+        return self._u_eq
 
     def __init__(self, omega: float, parameter: GeneratorParameters):
         super().__init__()
@@ -34,8 +38,8 @@ Actually, it is the classical model
             **as_dict(parameter))
 
         self._x_eq: FloatArray = np.zeros((0, 0))
-
-        self.alpha_st: FloatArray = np.zeros((0, 0))
+        self._u_eq: FloatArray = np.zeros((0, 0))
+        
         self.avr = Avr()
         self.governor = Governor()
         self.pss = Pss()
@@ -223,15 +227,17 @@ Actually, it is the classical model
 
         V_abs = abs(V)
         Pow = I.conjugate() * V
-        P = Pow.real
+        P_m = Pow.real
 
-        x_gen, Vfd = self.get_self_equilibrium(V, I)
-        x_avr = self.avr.initialize(Vfd, V_abs)
-        x_gov = self.governor.initialize(P)
+        x_gen, V_fd = self.get_self_equilibrium(V, I)
+        x_avr = self.avr.initialize(V_fd, V_abs)
+        x_gov = self.governor.initialize(P_m)
         x_pss = self.pss.initialize()
         
         x_st = np.vstack((x_gen, x_avr, x_gov, x_pss))
-        self.alpha_st = np.array([P, Vfd, V_abs]).reshape(-1, 1)
-
+        
+        self._u_eq = np.array([V_fd, P_m]).reshape(-1, 1)
         self._x_eq = x_st
+        
+        
         del_cache(self, nameof(Generator.system_matrix))

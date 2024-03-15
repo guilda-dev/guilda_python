@@ -21,16 +21,14 @@ restrictions: SetAccess = public
         Branch (_type_): _description_
     '''
 
-    def __init__(self, from_: int, to: int, x: complex, y: float, tap: float, phase: float):
-        super().__init__(from_, to)
+    def __init__(self, bus1: int, bus2: int, z: complex, y: float, tap: float, phase: float):
+        super().__init__(bus1, bus2, z, y)
         
-        self.x: complex = x
-        self.y: float = y
         self.tap: float = tap
         self.phase: float = phase
 
     def get_admittance_matrix(self) -> ComplexArray:
-        x = self.x
+        x = self.z
         y = self.y
         t = self.tap
         p = self.phase
