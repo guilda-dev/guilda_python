@@ -18,38 +18,38 @@ np.set_printoptions(
 
 # net2 = sample.IEEE68bus()
 
-net = sample.simple_3_bus_nishino(
-    True, 
-    # generator_model=Generator
-)
-
-scenario = SimulationScenario(
-    tstart=0, 
-    tend=60,
-    u=[
-        BusInput(
-            index=3,
-            time=[0, 10, 20, 60],
-            value=np.array([
-                [0, 0.05, 0.1, 0.1],
-                [0,    0,   0,   0],
-            ]).T,
-        )
-    ]
-)
-
-
-# net = sample.simple_2_bus_moris(
-#     generator_model=Generator
+# net = sample.simple_3_bus_nishino(
+#     True, 
+#     # generator_model=Generator
 # )
 
 # scenario = SimulationScenario(
-#     tstart = 0,
-#     tend = 20,
-#     dx_init_sys={
-#         1: np.array([np.pi / 6, 0]).reshape((-1, 1))
-#     }
+#     tstart=0, 
+#     tend=60,
+#     u=[
+#         BusInput(
+#             index=3,
+#             time=[0, 10, 20, 60],
+#             value=np.array([
+#                 [0, 0.05, 0.1, 0.1],
+#                 [0,    0,   0,   0],
+#             ]).T,
+#         )
+#     ]
 # )
+
+
+net = sample.simple_2_bus_moris(
+    generator_model=Generator
+)
+
+scenario = SimulationScenario(
+    tstart = 0,
+    tend = 20,
+    dx_init_sys={
+        1: np.array([np.pi / 6, 0]).reshape((-1, 1))
+    }
+)
 
 
 net.initialize()

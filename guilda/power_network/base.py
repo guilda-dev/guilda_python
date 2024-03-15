@@ -110,15 +110,15 @@ class _PowerNetwork(object):
             m[i] = len(m)
         return m
 
-    @cached_property
+    @property
     def x_equilibrium(self) -> List[FloatArray]:
         return [np.array(self.a_bus_dict[b].component.x_equilibrium) for b in self.bus_indices]
 
-    @cached_property
+    @property
     def V_equilibrium(self) -> List[complex]:
         return [self.a_bus_dict[b].V_equilibrium or 0 for b in self.bus_indices]
 
-    @cached_property
+    @property
     def I_equilibrium(self) -> List[complex]:
         return [self.a_bus_dict[b].I_equilibrium or 0 for b in self.bus_indices]
 
@@ -244,7 +244,7 @@ class _PowerNetwork(object):
 _pn_cached_vars += [
     nameof(_PowerNetwork.bus_index_map),
     nameof(_PowerNetwork.bus_indices),
-    nameof(_PowerNetwork.x_equilibrium),
-    nameof(_PowerNetwork.V_equilibrium),
-    nameof(_PowerNetwork.I_equilibrium),
+    # nameof(_PowerNetwork.x_equilibrium),
+    # nameof(_PowerNetwork.V_equilibrium),
+    # nameof(_PowerNetwork.I_equilibrium),
 ]
