@@ -140,14 +140,14 @@ def get_dx_con(
     dx_component: List[FloatArray] = []
     constraint_component: List[FloatArray] = []
 
-    for idx in simulated_buses:
+    for idx_arr, idx in enumerate(simulated_buses):
         f = buses[idx].component.get_dx_con_func(linear)
         v = V_all[0, idx] + 1j * V_all[1, idx]
         i = I_all[0, idx] + 1j * I_all[1, idx]
         dx_i, cs_i = f(
             v,
             i,
-            x_buses[idx],
+            x_buses[idx_arr],
             u_buses[idx],
             t,
         )

@@ -2,7 +2,7 @@ from collections import defaultdict
 import numpy as np
 
 from typing import Dict, TypeVar, Type, List
-from guilda.bus import BusParameters, BusSlack, BusPV, BusPQ
+from guilda.bus import BusParameters, BusSlack, BusPV, BusPQ, Bus
 from guilda.branch import BranchParameters, BranchPi, BranchPiTransformer, Branch
 from guilda.generator import GeneratorParameters, PssParameters, Generator1Axis, Pss
 from guilda.avr import AvrSadamoto2019Parameters, AvrSadamoto2019
@@ -45,19 +45,20 @@ class IEEE68bus(PowerNetwork):
         super().__init__()
     
         # add buses
-        for bus in buses:
-            shunt = bus.G_shunt + 1j * bus.B_shunt
-            if bus.type == 1:
-                self.add_bus(BusSlack(bus.V_abs, bus.V_angle, shunt))
-                self.set_generator(bus.No)
-            elif bus.type == 2:
-                self.add_bus(BusPV(bus.P_gen, bus.V_abs, shunt))
-                self.set_generator(bus.No)
-            elif bus.type == 3:
-                self.add_bus(BusPQ(-bus.P_load, -bus.Q_load, shunt))
-                if bus.P_load != 0 or bus.Q_load != 0:
+        for bus_params in buses:
+            shunt = bus_params.G_shunt + 1j * bus_params.B_shunt
+            index = bus_params.No
+            if bus_params.type == 1:
+                bus = self.add_bus(BusSlack(bus_params.V_abs, bus_params.V_angle, shunt, index=index))
+                self.set_generator(bus_params.No, bus)
+            elif bus_params.type == 2:
+                bus = self.add_bus(BusPV(bus_params.P_gen, bus_params.V_abs, shunt, index=index))
+                self.set_generator(bus_params.No, bus)
+            elif bus_params.type == 3:
+                bus = self.add_bus(BusPQ(-bus_params.P_load, -bus_params.Q_load, shunt, index=index))
+                if bus_params.P_load != 0 or bus_params.Q_load != 0:
                     load = LoadImpedance()
-                    self.a_bus[-1].set_component(load)
+                    bus.set_component(load)
         
         # add branches
         for branch in branches:
@@ -82,13 +83,13 @@ class IEEE68bus(PowerNetwork):
             
         self.initialize()
         
-    def set_generator(self, i: int):
+    def set_generator(self, i: int, bus: Bus):
         if len(gen_by_bus[i]) == 0:
             return
         generator = gen_by_bus[i][0]
         g = Generator1Axis(OMEGA_0, generator)
         g.set_avr(AvrSadamoto2019(ex_by_bus[i][0]))
         g.set_pss(Pss(pss_by_bus[i][0]))
-        self.a_bus[-1].set_component(g)
+        bus.set_component(g)
 
     

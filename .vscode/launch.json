@@ -6,23 +6,23 @@
   "configurations": [
     {
       "name": "simulate",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/test_simulate.py",
       "console": "integratedTerminal",
       "justMyCode": true
     },
     {
-      "name": "main2.py",
-      "type": "python",
+      "name": "68bus",
+      "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/main2.py",
+      "program": "${workspaceFolder}/test_68bus.py",
       "console": "integratedTerminal",
       "justMyCode": true
     },
     {
       "name": "Python: Current File",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
