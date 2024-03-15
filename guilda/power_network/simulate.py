@@ -215,6 +215,14 @@ def simulate(
             [x[i] for x in sol_list])
         for i in range(4)
     ]
+    t_filter = np.concatenate([
+        [True],
+        t_all[1:] > t_all[:1]
+    ])
+    t_all = t_all[t_filter]
+    x_all = x_all[t_filter, :]
+    V_all = V_all[t_filter, :]
+    I_all = I_all[t_filter, :]
 
     x_part_all = sep_col_vec(x_all.T, meta.nx_bus + meta.nx_ctrl_global + meta.nx_ctrl)
     i1 = len(meta.nx_bus)
