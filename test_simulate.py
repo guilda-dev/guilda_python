@@ -64,6 +64,7 @@ options = SimulationOptions(
     linear=False,
     rtol=1e-6,
     atol=1e-6,
+    t_interval= 0.01
 )
 
 result = net.simulate(

@@ -88,6 +88,7 @@ class SimulationOptions:
 
     atol: float = 1e-8
     rtol: float = 1e-8
+    t_interval: float = -1
 
     do_report: bool = False
     do_retry: bool = True

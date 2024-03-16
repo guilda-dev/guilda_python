@@ -114,10 +114,15 @@ def solve_dae(
     sim.algvar = [True] * nx + [False] * nVI
     con = sim.make_consistent('IDA_YA_YDP_INIT')
     sim.display_progress = False  # this one is useless, dunno if it is buggy of my fault
+    
+    ncp_list = None
+    if options.t_interval > 0:
+        ss, se = (segment.time_start, segment.time_end)
+        ncp_list = np.arange(ss, se, options.t_interval)
 
     @suppress_stdout
     def s():
-        return sim.simulate(segment.time_end)
+        return sim.simulate(segment.time_end, 0, ncp_list)
 
     t_sol, y_orig, dy = s()
     y = y_orig.T
