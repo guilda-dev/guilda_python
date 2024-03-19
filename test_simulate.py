@@ -72,8 +72,8 @@ result = net.simulate(
     options
 )
 
-plt.plot(result.t, result[1].x[:, 1], label="rotator angle difference")
-plt.plot(result.t, result[2].x[:, 1], label="rotator angle difference")
+plt.plot(result.t, result[1].x[:, 1], label="omega 1")
+plt.plot(result.t, result[2].x[:, 1], label="omega 2")
 plt.legend()
 plt.show()
 

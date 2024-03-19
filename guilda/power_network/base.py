@@ -184,9 +184,9 @@ class _PowerNetwork(object):
         # this one definitely requires numpy backend
         ans = root(lambda x: func_eq(Y, x), x0, method="hybr")
 
-        Vrans = np.array([[ans.x[i]] for i in range(0, len(ans.x), 2)])
-        Vians = np.array([[ans.x[i]] for i in range(1, len(ans.x), 2)])
-        Vans = Vrans + 1j*Vians
+        Vrans = ans.x[0::2]
+        Vians = ans.x[1::2]
+        Vans = (Vrans + 1j*Vians).reshape((-1, 1))
 
         Ians = Y @ Vans
         return Vans, Ians

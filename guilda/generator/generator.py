@@ -198,26 +198,13 @@ Actually, it is the classical model
         raise RuntimeError("Not Implemented")
 
     def get_self_equilibrium(self, V: complex, I: complex):
-
-        V_abs = abs(V)
-        V_angle = phase(V)
-        I_abs = abs(I)
-        I_angle = phase(I)
-        Pow = I.conjugate() * V
-        P = Pow.real
-        Q = Pow.imag
-
-        Xd: float = self.parameter.Xd
-        Xq: float = self.parameter.Xq
-
-        delta: float = V_angle + atan(P/(Q+(V_abs**2)/Xq))
-
-        Ev = V_abs * cos(delta - V_angle)
-        Exi = Xd * I_abs * sin(delta - I_angle)
-        E = Ev + Exi
-
+        X = self.parameter.Xd
+        
+        E_comp = V + 1j * X * I
+        E = abs(E_comp)
+        delta = phase(E_comp)
+        
         Vfd = E
-
         x_gen = np.array([[delta], [0]])
 
         return x_gen, Vfd
